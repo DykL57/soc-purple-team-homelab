@@ -76,7 +76,7 @@ public class LogonTest {
 
 **Result:** 5/5 attempts logged as individual Event 4625 entries, correctly aggregated by the detection query into a single MEDIUM-severity alert.
 
-*(Add screenshots/rule01-alert.png here)*
+*![Rule 1 Alert](screenshots/rule01-alert.png)*
 
 **What I'd tune in production:** raise the threshold to 5–10 (3 is intentionally low for lab-scale testing); add a lookup-based allowlist for known vulnerability scanners.
 
