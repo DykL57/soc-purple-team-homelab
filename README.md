@@ -128,7 +128,7 @@ Start-Process cmd.exe -Credential $cred -ArgumentList "/c exit"
 
 **Result:** 5 consecutive Event 4625 entries followed by a single Event 4624 for the `simtest` account, correctly correlated by the detection query into one alert.
 
-![Rule 2 Alert Results](screenshots/rule02-alert-results.png)
+![Rule 2 Alert Results](screenshots/rule02-alert.png)
 
 **What I'd tune in production:** exclude known noisy service accounts (`NOT Account_Name IN ("svc_*", "krbtgt")`); cross-reference `src_ips` — a single consistent source IP is more suspicious than a changing one; raise the fail-count threshold in high-turnover/shared-workstation environments.
 
