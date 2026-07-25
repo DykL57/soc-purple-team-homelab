@@ -38,7 +38,7 @@ Each rule below follows the same format: detection logic, SPL, how it was trigge
 | # | Rule | MITRE ATT&CK | Status |
 |---|---|---|---|
 | 1 | Failed Login Brute Force | T1110.001 | ✅ Validated |
-| 2 | Successful Login After Multiple Failures | T1078 | 🔄 In progress |
+| 2 | Successful Login After Multiple Failures | T1078 | ✅ Validated |
 | 3–50 | See [detection-rules/](detection-rules/) | — | ⏳ Planned |
 
 ### Rule 1 — Failed Login Brute Force
