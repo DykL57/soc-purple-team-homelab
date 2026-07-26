@@ -142,7 +142,7 @@ index=wineventlog sourcetype=WinEventLog:Security (EventCode=4625 OR EventCode=4
 $domain = "lab.local"
 $user   = "simtest"
 $badPassword = "WrongPassword123"
-$goodPassword = "P@ssw0rd2026!"
+$goodPassword = Read-Host "Enter lab password" -AsSecureString
 
 # 5 failed attempts
 1..5 | ForEach-Object {
