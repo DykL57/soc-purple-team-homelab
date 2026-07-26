@@ -10,13 +10,13 @@ Built to go beyond "I know what a SIEM is" — this lab documents real detection
 
 ```
 Zone 2 (SERVERS, 10.0.20.0/24)  ── DC01 (Active Directory, lab.local)
+                                  ── SPLUNK01 (Splunk Enterprise, relocated here from an isolated NAT segment)
 Zone 3 (CLIENTS, 10.0.30.0/24)  ── WIN-CL01, WIN-CL02
-Zone 6 (Gateway)                ── PFSENSE01 (routes + firewalls between zones)
-Zone 1 (MGMT/SIEM)              ── Splunk Enterprise Security
+Zone 6 (Gateway)                ── PFSENSE01 (Bridged WAN → real ISP-assigned IP; routes + firewalls between zones)
 Zone 5 (SENSOR/ATTACK)          ── KALI-OPS01 (isolated Red Team platform)
 ```
 
-All zones are isolated VMware Host-Only networks; pfSense is the only path between them, with explicit firewall rules per zone.
+All internal zones are isolated VMware Host-Only networks; pfSense is the only path between them, with explicit firewall rules per zone. WAN is Bridged directly to a physical adapter on the host, giving pfSense a real, ISP-routable IP address instead of a NAT-translated one — this was a deliberate change to enable genuine inbound/outbound traffic visibility (see Notable Troubleshooting below for what that migration broke, and how it was fixed).
 
 *(Add your network diagram image here — screenshots/network-architecture.png)*
 
@@ -25,8 +25,8 @@ All zones are isolated VMware Host-Only networks; pfSense is the only path betwe
 | Component | Role |
 |---|---|
 | Windows Server 2022 | Active Directory Domain Services + DNS (DC01) |
-| pfSense CE 2.8.1 | Inter-zone routing + firewall |
-| Splunk Enterprise | SIEM — log aggregation, correlation, alerting |
+| pfSense CE 2.8.1 | Inter-zone routing + firewall, Bridged WAN with real ISP IP |
+| Splunk Enterprise (Rocky Linux) | SIEM — log aggregation, correlation, alerting |
 | Splunk Universal Forwarder + Sysmon | Endpoint telemetry (DC01, WIN-CL01, WIN-CL02) |
 | Splunk Common Information Model (CIM) Add-on | Normalizes raw events into standard data models for `tstats`-accelerated searching |
 | Kali Linux | Red Team attack platform |
@@ -203,6 +203,14 @@ Add-ADGroupMember -Identity "Domain Admins" -Members "simlateral"
 
 ---
 
+## Network Traffic Monitoring
+
+pfSense forwards Firewall, System, and DHCP events to Splunk via syslog (UDP 5514), indexed separately from Windows telemetry (`index=pfsense`, sourcetype `pfsense:firewall`). This gives visibility into real inbound/outbound traffic at the network edge — allow/block decisions, source/destination IPs and ports — complementing the Windows-endpoint-focused detections in Rules 1–3. Getting this pipeline working end-to-end (WAN topology, DHCP, and forwarding) surfaced a substantial troubleshooting exercise; see below.
+
+**Next planned detections built on this data:**
+- Repeated firewall blocks from a single source (possible port scan / brute-force reconnaissance from outside)
+- Outbound connections to unusual/non-standard ports (possible C2 or data exfiltration)
+
 ## CIM / tstats Migration
 
 Rules 1 and 2 were converted from raw `index=` searches to `tstats` against Splunk's Common Information Model (CIM), for two reasons: `tstats` searches an accelerated summary rather than scanning raw events, and it's the standard, portable approach Splunk Enterprise Security itself relies on for correlation searches.
@@ -227,6 +235,7 @@ Rules 1 and 2 were converted from raw `index=` searches to `tstats` against Splu
 - **PsExec failed with "the user has not been granted the requested logon type at this computer," even with correct credentials and Domain Admin membership** — turned out to be the wrong GPO right entirely. PsExec's default mode installs and runs a remote service *as* the target account (Logon Type 5, service logon), which requires the "Log on as a service" right — a completely different setting from "Access this computer from the network" (network logon, Type 3), which was the first (wrong) place I checked. Confirmed via Event 4625's `Sub_Status 0xC000015B` alongside `Logon_Type 5` in the raw event — the sub-status/logon-type pair is the fastest way to identify exactly which User Rights Assignment setting is actually missing, instead of guessing.
 - **Event 7045 (service installation) returned 0 results when searched under `sourcetype=WinEventLog:Security`** — Service Control Manager events log to the **System** event log, not Security. Also, once found under `WinEventLog:System`, the relevant fields (`ServiceName`, `ServiceFileName`, `ServiceAccount`) weren't auto-extracted by the default Windows TA the way Security log fields are — required `rex` against `_raw` to pull them out manually.
 - **New CIM data models showed "no explicit index constraint" warnings, and editing the Data Model's own Constraints box didn't fix it** — the constraint box referenced a macro (`` `cim_Authentication_indexes` ``) rather than a literal index name. The actual fix was editing the macro's *definition* under `Settings → Advanced Search → Search Macros`, not the data model's constraint field itself.
+- **Migrating pfSense's WAN from NAT (VMnet8) to Bridged broke GUI access, syslog delivery to Splunk, and host-to-LAN DHCP — all from one adapter change.** Moving WAN off the NAT network removed pfSense's only route to the subnet where the Splunk server lived (it had no interface on that network anymore), which silently broke syslog forwarding with no error on either side. Relocating the Splunk server into pfSense's own LAN network to fix that then exposed a second, unrelated issue: VMware's built-in DHCP service was running in parallel with pfSense's DHCP server on the same segment, causing the host's own LAN adapter to fail DHCP entirely and fall back to an APIPA (`169.254.x.x`) address. Diagnosed by walking the chain systematically — pfSense's own routing table (`Diagnostics → Routes`) to catch the missing subnet, `tcpdump` on the Splunk server to confirm packets truly weren't arriving (vs. arriving and being dropped), and `ipconfig /all` to spot the APIPA fallback as the DHCP failure signature. Full writeup: [troubleshooting-pfsense-bridged-wan-dhcp-conflict.md](docs/troubleshooting-pfsense-bridged-wan-dhcp-conflict.md)
 
 ## Lab Hygiene
 
@@ -241,8 +250,11 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 - [x] Rule 2 (Successful Login After Multiple Failures) — validated end-to-end, converted to `tstats`
 - [x] Rule 3 (Lateral Movement via PsExec) — validated end-to-end
 - [x] CIM Add-on installed, Authentication/Change data models configured and verified
+- [x] pfSense WAN migrated to Bridged (real ISP-assigned IP)
+- [x] pfSense syslog → Splunk integration (Firewall/System/DHCP events)
+- [ ] Rule 4 (network-based detection using pfSense syslog data)
 - [ ] Convert Rule 3 to `tstats` (pending CIM `Change` tagging verification)
-- [ ] Rules 4–10 (Authentication / Lateral Movement category)
+- [ ] Rules 5–10 (Authentication / Lateral Movement / Network category)
 - [ ] Rules 11–40 (Exfil/C2, Malware, Persistence)
 - [ ] Full attack scenarios (phishing → lateral movement → exfil)
 - [ ] IBM QRadar (next SIEM platform after Splunk)
