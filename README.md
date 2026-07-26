@@ -42,7 +42,7 @@ Zone 6 (Gateway)                ── PFSENSE01 (Bridged WAN → real ISP-assig
        🖥️ Servers   💻 Clients   ⚔️ Attack
              │          │          │
             DC01          WIN-CL01    Kali
-          Splunk        WIN-CL02    Nmap
+            Splunk        WIN-CL02    Nmap
             DNS           Sysmon      PsExec
 
 Enterprise-style segmented SOC lab built on VMware, pfSense and Splunk.
