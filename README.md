@@ -12,11 +12,11 @@ Built to go beyond "I know what a SIEM is" — this lab documents real detection
 Zone 2 (SERVERS, 10.0.20.0/24)  ── DC01 (Active Directory, lab.local)
                                   ── SPLUNK01 (Splunk Enterprise, 10.0.20.100 — static DHCP mapping)
 Zone 3 (CLIENTS, 10.0.30.0/24)  ── WIN-CL01, WIN-CL02
+Zone 5 (SENSOR/ATTACK, 10.0.50.0/24) ── KALI-OPS01 (Red Team platform)
 Zone 6 (Gateway)                ── PFSENSE01 (Bridged WAN → real ISP-assigned IP; routes + firewalls between zones)
-Zone 5 (SENSOR/ATTACK)          ── KALI-OPS01 (isolated Red Team platform)
 ```
 
-All internal zones are isolated VMware Host-Only networks; pfSense is the only path between them, with explicit firewall rules per zone. WAN is Bridged directly to a physical adapter on the host, giving pfSense a real, ISP-routable IP address instead of a NAT-translated one — this was a deliberate change to enable genuine inbound/outbound traffic visibility (see Notable Troubleshooting below for what that migration broke, and how it was fixed).
+All internal zones are isolated VMware Host-Only networks; pfSense is the only path between them, with explicit firewall rules per zone (deny-by-default). WAN is Bridged directly to a physical adapter on the host, giving pfSense a real, ISP-routable IP address instead of a NAT-translated one — this was a deliberate change to enable genuine inbound/outbound traffic visibility (see Notable Troubleshooting below for what that migration broke, and how it was fixed). Zone 5 (Kali) was initially isolated with no route to any other zone by design; a dedicated `OPT2` interface and firewall rule were added later specifically to support Rule 5's port-scan simulation.
 
 *(Add your network diagram image here — screenshots/network-architecture.png)*
 
@@ -43,7 +43,8 @@ Each rule below follows the same format: detection logic, SPL, how it was trigge
 | 2 | Successful Login After Multiple Failures | T1078 | Credential Access / Initial Access | `tstats` (CIM Authentication) | ✅ Validated |
 | 3 | Lateral Movement via Remote Service Creation (PsExec) | T1021.002 / T1569.002 | Lateral Movement | Raw search (`rex` extraction) | ✅ Validated |
 | 4 | Outbound Traffic to High-Risk Countries | T1071 / TA0011 | Network — Anomalous Outbound Traffic | Raw search (`rex` + `iplocation`) | ✅ Validated (see limitations) |
-| 5–50 | See [detection-rules/](detection-rules/) | — | — | — | ⏳ Planned |
+| 5 | Port Scan Detection (High Port-Touch Volume) | T1046 | Network — Reconnaissance | Raw search (`rex` + `stats`) | ✅ Validated |
+| 6–50 | See [detection-rules/](detection-rules/) | — | — | — | ⏳ Planned |
 
 ### Rule 1 — Brute Force Detection (Authentication)
 
@@ -236,6 +237,38 @@ index=pfsense "filterlog"
 
 ---
 
+### Rule 5 — Port Scan Detection (High Port-Touch Volume)
+
+**Detection logic:** Flags a single source IP touching an unusually high number of distinct destination ports on the same destination host within a 1-minute window — the classic signature of a port scan. Deliberately does **not** filter on `action="block"` — the rule detects the pattern of many-ports-from-one-source regardless of whether pfSense's firewall rules pass or block the traffic, since a permissive rule (or a scan against an open service range) would otherwise hide a real scan from a block-only detection.
+
+**SPL:**
+```spl
+index=pfsense "filterlog"
+| dedup _raw
+| rex field=_raw "filterlog\s+\d+\s+-\s+-\s+(?<rule>[^,]*),(?<sub>[^,]*),(?<anchor>[^,]*),(?<tracker>[^,]*),(?<iface>[^,]*),(?<reason>[^,]*),(?<action>[^,]*),(?<direction>[^,]*),(?<ipver>[^,]*),"
+| where ipver="4"
+| rex field=_raw "(?<src_ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}),(?<dst_ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}),(?<src_port>\d+),(?<dst_port>\d+)"
+| bin _time span=1m
+| stats dc(dst_port) as unique_ports_tried, count as attempts by src_ip, dst_ip, _time
+| where unique_ports_tried >= 10
+| stats sum(attempts) as total_attempts, max(unique_ports_tried) as max_ports_per_min, earliest(_time) as first_seen, latest(_time) as last_seen by src_ip, dst_ip
+| eval first_seen=strftime(first_seen, "%Y-%m-%d %H:%M:%S"), last_seen=strftime(last_seen, "%Y-%m-%d %H:%M:%S")
+| table first_seen, last_seen, src_ip, dst_ip, max_ports_per_min, total_attempts
+```
+
+**Simulation used to trigger it:** required extending the lab topology to allow this test — `KALI-OPS01` (Zone 5, `10.0.50.0/24`) had no route to Zone 2 prior to this rule, by design (pfSense deny-by-default). Added a 4th virtual NIC on `PFSENSE01` bridged to Kali's VMnet, a new `OPT2` interface (`10.0.50.1/24`), a deliberately permissive firewall rule (`Pass`, any protocol, source Any, destination `10.0.20.0/24`) to test detection regardless of block/pass, and a default route on Kali.
+```bash
+nmap -sS -p 1-1000 10.0.20.1
+```
+
+**Result:** nmap reported 3 open ports (53/domain, 80/http, 443/https — pfSense's own resolver and WebGUI) and 997 filtered against `10.0.20.1`. The detection query correctly identified the scan: **759 unique destination ports touched by `10.0.50.60` against `10.0.20.1`** within a single one-minute window, with 2,266 total connection attempts across the scan — far exceeding the 10-port threshold.
+
+![Rule 5 Alert](screenshots/rule05-alert.png)
+
+**What I'd tune in production:** raise the threshold significantly (the lab's `>= 10` is deliberately sensitive for validation; production typically uses 15–50+ depending on baseline); allowlist known vulnerability scanner infrastructure (Nessus/OpenVAS/Qualys will trigger this identically to a malicious scan); correlate with whether scanned ports actually returned open/closed/filtered, since a scan against a mostly-filtered host is a stronger anomaly than one against a host with many legitimately open services; add a companion horizontal-scan detection (many hosts, few ports each) since this rule only catches vertical scans.
+
+---
+
 ## Network Traffic Monitoring
 
 pfSense forwards Firewall, System, and DHCP events to Splunk via syslog (UDP 5514), indexed separately from Windows telemetry (`index=pfsense`, sourcetype `pfsense:firewall`). This gives visibility into real inbound/outbound traffic at the network edge — allow/block decisions, source/destination IPs and ports, and (via Rule 4) geo-IP context — complementing the Windows-endpoint-focused detections in Rules 1–3. Getting this pipeline working end-to-end (WAN topology, DHCP, and forwarding) surfaced a substantial troubleshooting exercise; see below.
@@ -243,8 +276,8 @@ pfSense forwards Firewall, System, and DHCP events to Splunk via syslog (UDP 551
 A device inventory lookup (built from an `nmap -sn` sweep of the local network) enriches traffic queries with device names/types instead of raw IPs — e.g. `| lookup device_inventory.csv ip AS src_ip OUTPUT hostname AS device_name`.
 
 **Next planned detections built on this data:**
-- Repeated firewall blocks from a single source (possible port scan / brute-force reconnaissance from outside)
 - Outbound connections to unusual/non-standard ports (possible C2 or data exfiltration)
+- Horizontal port scan (many hosts, low ports-per-host) as a companion to Rule 5's vertical scan detection
 
 ## CIM / tstats Migration
 
@@ -271,8 +304,9 @@ Rules 1 and 2 were converted from raw `index=` searches to `tstats` against Splu
 - **Event 7045 (service installation) returned 0 results when searched under `sourcetype=WinEventLog:Security`** — Service Control Manager events log to the **System** event log, not Security. Also, once found under `WinEventLog:System`, the relevant fields (`ServiceName`, `ServiceFileName`, `ServiceAccount`) weren't auto-extracted by the default Windows TA the way Security log fields are — required `rex` against `_raw` to pull them out manually.
 - **New CIM data models showed "no explicit index constraint" warnings, and editing the Data Model's own Constraints box didn't fix it** — the constraint box referenced a macro (`` `cim_Authentication_indexes` ``) rather than a literal index name. The actual fix was editing the macro's *definition* under `Settings → Advanced Search → Search Macros`, not the data model's constraint field itself.
 - **Migrating pfSense's WAN from NAT (VMnet8) to Bridged broke GUI access, syslog delivery to Splunk, and host-to-LAN DHCP — all from one adapter change, with the true root cause only surfacing days later.** Moving WAN off the NAT network removed pfSense's only route to the subnet where the Splunk server lived, which silently broke syslog forwarding with no error on either side; fixed by relocating the Splunk server into pfSense's own LAN network. That relocation then hit a DHCP failure (APIPA fallback) that looked like VMware's built-in DHCP service competing with pfSense's — disabling it was a correct hygiene fix but turned out to be coincidental, not the actual cause. The real root cause, found only when the identical symptom recurred on a second, unrelated host (the Splunk server itself): pfSense's DHCP **Address Pool Range was misconfigured to `192.168.1.x`, entirely unrelated to the LAN's actual `10.0.20.0/24` subnet** — meaning the DHCP server could never hand out a lease to anyone on that interface, regardless of client or VMware settings. Corrected the pool to `10.0.20.101–200`, added a static DHCP mapping for the Splunk server (`10.0.20.100`) to keep its address permanent for the forwarders and syslog target that reference it by IP. Full writeup: [troubleshooting-pfsense-bridged-wan-dhcp-conflict.md](docs/troubleshooting-pfsense-bridged-wan-dhcp-conflict.md)
-- **pfSense's `dpinger` (WAN gateway monitor) syslog events arrive duplicated in Splunk** — identical `_raw` content, identical microsecond timestamp, roughly double the expected volume. Investigated as a possible overlap between `Remote Syslog Contents` categories (`System Events` and `Gateway Monitor Events` both checked, and `dpinger` may log to a facility both match), but disabling `System Events` didn't resolve it. Confirmed via `| stats count by _raw | where count > 1` that **`filterlog` (the Firewall Events data Rule 4 depends on) is not affected** — only `dpinger`/gateway-monitor-related events showed the duplication. Root cause not fully diagnosed given it doesn't impact any current detection rule; worked around with `dedup _raw` at search time as a defensive habit for any future `index=pfsense` query, rather than continuing to chase a root cause with no practical impact on the lab.
+- **pfSense's `dpinger` (WAN gateway monitor) syslog events arrive duplicated in Splunk** — identical `_raw` content, identical microsecond timestamp, roughly double the expected volume. Investigated as a possible overlap between `Remote Syslog Contents` categories (`System Events` and `Gateway Monitor Events` both checked, and `dpinger` may log to a facility both match), but disabling `System Events` didn't resolve it. Confirmed via `| stats count by _raw | where count > 1` that **`filterlog` (the Firewall Events data Rules 4/5 depend on) is not affected** — only `dpinger`/gateway-monitor-related events showed the duplication. Root cause not fully diagnosed given it doesn't impact any current detection rule; worked around with `dedup _raw` at search time as a defensive habit for any future `index=pfsense` query, rather than continuing to chase a root cause with no practical impact on the lab.
 - **CIM `Change` data model tagging looked successful but `tstats` still returned nothing usable for Rule 3** — see Rule 3's write-up and the CIM/tstats Migration section above. Root cause: `Settings → Tags` only tags an *event*; the CIM `Change` model separately requires field-level extraction (`object`, `object_category`) that the standard Windows TA doesn't provide for Service Control Manager events, so a correctly-tagged event still lands in the model without the fields needed to actually filter for it.
+- **Kali (`KALI-OPS01`, Zone 5) had no route to any other lab zone** — this was intentional pfSense isolation, not a bug, but had to be deliberately undone to validate Rule 5's port-scan simulation. Required adding a 4th NIC to `PFSENSE01`, a new `OPT2` interface, and an explicit firewall rule, since pfSense's deny-by-default posture blocks inter-zone traffic until a rule is added — the same principle documented earlier for VMnet3/VMnet4 isolation.
 
 ## Lab Hygiene
 
@@ -287,15 +321,18 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 - [x] Rule 2 (Successful Login After Multiple Failures) — validated end-to-end, converted to `tstats`
 - [x] Rule 3 (Lateral Movement via PsExec) — validated end-to-end
 - [x] Rule 4 (Outbound Traffic to High-Risk Countries) — validated end-to-end, false-positive limitation documented (2/2 confirmed false positives)
+- [x] Rule 5 (Port Scan Detection) — validated end-to-end, required extending lab topology to Zone 5
 - [x] CIM Add-on installed, Authentication/Change data models configured and verified
 - [x] pfSense WAN migrated to Bridged (real ISP-assigned IP)
 - [x] pfSense syslog → Splunk integration (Firewall/System/DHCP events)
 - [x] pfSense DHCP root cause fixed (Address Pool Range corrected); static mapping added for Splunk server
 - [x] Device inventory lookup built from nmap sweep, integrated into traffic queries
 - [x] Rule 3 `tstats`/CIM `Change` conversion investigated — deliberately kept as raw search (TA field-extraction gap documented)
+- [x] Zone 5 (Kali) connected to Zone 2 via new pfSense interface, for controlled attack-simulation testing
 - [ ] Add live IP reputation lookup (VirusTotal/AbuseIPDB) to Rule 4 to reduce geo-IP false positives
+- [ ] Horizontal port scan detection (companion to Rule 5)
 - [ ] Diagnose root cause of pfSense `dpinger` syslog duplication (non-blocking)
-- [ ] Rules 5–10 (Authentication / Lateral Movement / Network category)
+- [ ] Rules 6–10 (Authentication / Lateral Movement / Network category)
 - [ ] Rules 11–40 (Exfil/C2, Malware, Persistence)
 - [ ] Full attack scenarios (phishing → lateral movement → exfil)
 - [ ] IBM QRadar (next SIEM platform after Splunk)
