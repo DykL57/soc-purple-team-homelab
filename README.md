@@ -16,7 +16,7 @@ Zone 5 (SENSOR/ATTACK, 10.0.50.0/24) ── KALI-OPS01 (Red Team platform)
 Zone 6 (Gateway)                ── PFSENSE01 (Bridged WAN → real ISP-assigned IP; routes + firewalls between zones)
 ```
 
-All internal zones are isolated VMware Host-Only networks; pfSense is the only path between them, with explicit firewall rules per zone (deny-by-default). WAN is Bridged directly to a physical adapter on the host, giving pfSense a real, ISP-routable IP address instead of a NAT-translated one — this was a deliberate change to enable genuine inbound/outbound traffic visibility (see Notable Troubleshooting below for what that migration broke, and how it was fixed). Zone 5 (Kali) was initially isolated with no route to any other zone by design; a dedicated `OPT2` interface and firewall rule were added later specifically to support Rule 5's port-scan simulation.
+All internal zones are isolated VMware Host-Only networks; pfSense is the only path between them, with explicit firewall rules per zone (deny-by-default). WAN is Bridged directly to a physical Wi-Fi adapter on the host, giving pfSense a real, ISP-routable IP address instead of a NAT-translated one — this was a deliberate change to enable genuine inbound/outbound traffic visibility. This choice has a real downside (see Notable Troubleshooting: Wi-Fi as WAN is less stable than a wired uplink would be). Zone 5 (Kali) was initially isolated with no route to any other zone by design; a dedicated `OPT2` interface and firewall rule were added later specifically to support Rule 5's port-scan simulation.
 
 *(Add your network diagram image here — screenshots/network-architecture.png)*
 
@@ -30,6 +30,7 @@ All internal zones are isolated VMware Host-Only networks; pfSense is the only p
 | Splunk Universal Forwarder + Sysmon | Endpoint telemetry (DC01, WIN-CL01, WIN-CL02) |
 | Splunk Common Information Model (CIM) Add-on | Normalizes raw events into standard data models for `tstats`-accelerated searching |
 | Splunk `iplocation` (built-in) | Geo-IP enrichment for network-based detections, no add-on required |
+| Custom VirusTotal scripted lookup (Python) | Live IP reputation enrichment for Rule 4, reducing reliance on stale geo-IP data |
 | Kali Linux | Red Team attack platform |
 | VMware Workstation | Virtualization + network segmentation |
 
@@ -42,7 +43,7 @@ Each rule below follows the same format: detection logic, SPL, how it was trigge
 | 1 | Brute Force Detection (Authentication) | T1110 | Credential Access | `tstats` (CIM Authentication) | ✅ Validated |
 | 2 | Successful Login After Multiple Failures | T1078 | Credential Access / Initial Access | `tstats` (CIM Authentication) | ✅ Validated |
 | 3 | Lateral Movement via Remote Service Creation (PsExec) | T1021.002 / T1569.002 | Lateral Movement | Raw search (`rex` extraction) | ✅ Validated |
-| 4 | Outbound Traffic to High-Risk Countries | T1071 / TA0011 | Network — Anomalous Outbound Traffic | Raw search (`rex` + `iplocation`) | ✅ Validated (see limitations) |
+| 4 | Outbound Traffic to High-Risk Countries | T1071 / TA0011 | Network — Anomalous Outbound Traffic | Raw search + `iplocation` + VirusTotal lookup | ✅ Validated |
 | 5 | Port Scan Detection (High Port-Touch Volume) | T1046 | Network — Reconnaissance | Raw search (`rex` + `stats`) | ✅ Validated |
 | 6–50 | See [detection-rules/](detection-rules/) | — | — | — | ⏳ Planned |
 
@@ -142,7 +143,7 @@ index=wineventlog sourcetype=WinEventLog:Security (EventCode=4625 OR EventCode=4
 $domain = "lab.local"
 $user   = "simtest"
 $badPassword = "WrongPassword123"
-$goodPassword = Read-Host "Enter lab password" -AsSecureString
+$goodPassword = "P@ssw0rd2026!"
 
 # 5 failed attempts
 1..5 | ForEach-Object {
@@ -208,7 +209,7 @@ Add-ADGroupMember -Identity "Domain Admins" -Members "simlateral"
 
 ### Rule 4 — Outbound Traffic to High-Risk Countries
 
-**Detection logic:** Flags outbound connections from the lab network to public IPs geolocated in a configurable list of high-risk countries (e.g., countries associated with known APT activity against Israeli critical infrastructure — Iran, Russia, North Korea, Syria, China). Uses Splunk's built-in `iplocation` command (bundled MaxMind GeoLite2 database — no add-on install required) against pfSense's `filterlog` firewall events.
+**Detection logic:** Flags outbound connections from the lab network to public IPs geolocated in a configurable list of high-risk countries (e.g., countries associated with known APT activity against Israeli critical infrastructure — Iran, Russia, North Korea, Syria, China). Uses Splunk's built-in `iplocation` command (bundled MaxMind GeoLite2 database — no add-on install required) against pfSense's `filterlog` firewall events, then enriches each flagged IP with live reputation data via a custom VirusTotal scripted lookup.
 
 **SPL:**
 ```spl
@@ -220,20 +221,24 @@ index=pfsense "filterlog"
 | where dst_ip!="127.0.0.1" AND NOT match(dst_ip, "^10\.") AND NOT match(dst_ip, "^192\.168\.")
 | iplocation dst_ip
 | search Country IN ("Iran", "Russia", "North Korea", "Syria", "China")
-| stats count, values(dst_ip) as dest_ips, earliest(_time) as first_seen, latest(_time) as last_seen by src_ip, Country
+| dedup dst_ip
+| lookup vt_ip_reputation dst_ip
+| stats count, values(dst_ip) as dest_ips, values(vt_malicious) as vt_malicious, values(vt_country) as vt_country, earliest(_time) as first_seen, latest(_time) as last_seen by src_ip, Country
 | eval first_seen=strftime(first_seen, "%Y-%m-%d %H:%M:%S"), last_seen=strftime(last_seen, "%Y-%m-%d %H:%M:%S")
-| table first_seen, last_seen, src_ip, Country, count, dest_ips
+| table first_seen, last_seen, src_ip, Country, count, dest_ips, vt_malicious, vt_country
 ```
 
 **Field extraction note:** pfSense's `filterlog` sourcetype arrives as unstructured, positional CSV inside the syslog message, with no default Splunk TA field extraction. Rather than parsing by fixed column position (which breaks across TCP/UDP/ICMP, since each logs a different number of fields), this query extracts the fixed-position header fields (rule, interface, action, direction, ipver) with one `rex`, then matches the `src_ip,dst_ip` pattern directly as two adjacent dotted-quad values with a second `rex` — robust regardless of protocol. `dedup _raw` was added defensively after discovering pfSense duplicates some syslog event types at the source (see Notable Troubleshooting) — investigation confirmed `filterlog` itself was not actually affected, but the safeguard is kept in place.
 
-**Result:** Validated against ~8,300 real, organic outbound events (DNS resolution, Windows Update, telemetry, etc.) collected over several hours of normal lab operation. The query correctly aggregated hits by source IP and country, surfacing 4 connections geolocated to Iran and 2 to Russia — counts confirmed unchanged after adding `dedup`.
+**Live reputation enrichment:** a custom Python scripted lookup (`scripts/vt_ip_lookup.py`) queries the VirusTotal API for every geo-flagged IP and returns `vt_malicious`, `vt_suspicious`, `vt_reputation`, `vt_country` directly in the search results. Registered as an External lookup in Splunk (`vt_ip_reputation`). The API key is stored in a separate, local-only file (`vt_api_key.txt`, `chmod 600`, never committed) next to the script, so the script itself is safe to share while the credential stays server-side. `| dedup dst_ip` runs before the lookup, since VirusTotal's free tier is rate-limited to 4 requests/minute — querying once per unique IP per run, not once per matching event, is required to stay within that limit.
 
-**Known limitation — both flagged IPs confirmed as false positives:** both the Iran- and Russia-geolocated IPs were manually checked against VirusTotal and found to be legitimate infrastructure, not actually associated with either country. This isn't a statement that Iran/Russia are the wrong countries to monitor — both remain valid entries given known APT activity against Israeli critical infrastructure — it's a statement about Splunk's bundled MaxMind GeoLite2 database misattributing these two specific IPs. Root cause: the free database is a point-in-time snapshot that isn't automatically kept current, and IP block ownership/geolocation changes frequently (RIR reassignment, cloud/CDN churn). **Geo-IP alone is not sufficient grounds for escalation** — every hit from this rule must be manually cross-referenced against a live threat-intel source (VirusTotal, AbuseIPDB) before being treated as credible. In this validation run, doing so caught a 100% false-positive rate (2 for 2), which is itself the most useful finding from building this rule. It's intentionally scoped as a low-confidence supporting signal, not a standalone confirmed-threat detection.
+**Result:** Validated against ~8,300 real, organic outbound events (DNS resolution, Windows Update, telemetry, etc.) collected over several hours of normal lab operation. The query correctly aggregated hits by source IP and country, surfacing 4 connections geolocated to Iran and 2 to Russia.
+
+**Known limitation — both flagged IPs confirmed as false positives, now auto-detected:** both the Iran- and Russia-geolocated IPs were manually checked against VirusTotal and found to be legitimate infrastructure, not actually associated with either country. This isn't a statement that Iran/Russia are the wrong countries to monitor — both remain valid entries given known APT activity against Israeli critical infrastructure — it's a statement about Splunk's bundled MaxMind GeoLite2 database misattributing these two specific IPs. Root cause: the free database is a point-in-time snapshot that isn't automatically kept current, and IP block ownership/geolocation changes frequently (RIR reassignment, cloud/CDN churn). The VirusTotal enrichment now surfaces `vt_malicious=0` for both directly in the alert output, meaning an analyst no longer has to manually check external threat-intel sites to recognize these as likely false positives — the geo-IP signal is weak on its own, but it's no longer the *only* signal.
 
 ![Rule 4 Alert](screenshots/rule04-alert.png)
 
-**What I'd tune in production:** replace/supplement the bundled GeoLite2 database with a regularly-updated MaxMind subscription, or pair with a live IP reputation API (VirusTotal/AbuseIPDB) instead of relying on geolocation alone — a 100% false-positive rate in validation makes this a hard requirement, not a nice-to-have; build a maintained allowlist for known-legitimate infrastructure (root DNS servers, major cloud/CDN ASNs) to cut expected noise before it reaches an analyst; correlate with destination port/protocol, since outbound HTTPS to a flagged country is far less notable than traffic on an unusual port; track ASN alongside country, since ASN ownership tends to be more stable than country-level geolocation.
+**What I'd tune in production:** replace the script's in-memory cache with a persistent lookup table (KV Store) so previously-checked IPs aren't re-queried across separate runs; add AbuseIPDB as a second reputation source; move to a paid VirusTotal tier or batched API usage if match volume grows past the free tier's limits; build a maintained allowlist for known-legitimate infrastructure (root DNS servers, major cloud/CDN ASNs); correlate with destination port/protocol, since outbound HTTPS to a flagged country is far less notable than traffic on an unusual port; track ASN alongside country, since ASN ownership tends to be more stable than country-level geolocation.
 
 ---
 
@@ -271,7 +276,7 @@ nmap -sS -p 1-1000 10.0.20.1
 
 ## Network Traffic Monitoring
 
-pfSense forwards Firewall, System, and DHCP events to Splunk via syslog (UDP 5514), indexed separately from Windows telemetry (`index=pfsense`, sourcetype `pfsense:firewall`). This gives visibility into real inbound/outbound traffic at the network edge — allow/block decisions, source/destination IPs and ports, and (via Rule 4) geo-IP context — complementing the Windows-endpoint-focused detections in Rules 1–3. Getting this pipeline working end-to-end (WAN topology, DHCP, and forwarding) surfaced a substantial troubleshooting exercise; see below.
+pfSense forwards Firewall, System, and DHCP events to Splunk via syslog (UDP 5514), indexed separately from Windows telemetry (`index=pfsense`, sourcetype `pfsense:firewall`). This gives visibility into real inbound/outbound traffic at the network edge — allow/block decisions, source/destination IPs and ports, and (via Rule 4) geo-IP + live reputation context — complementing the Windows-endpoint-focused detections in Rules 1–3. Getting this pipeline working end-to-end (WAN topology, DHCP, and forwarding) surfaced a substantial troubleshooting exercise; see below.
 
 A device inventory lookup (built from an `nmap -sn` sweep of the local network) enriches traffic queries with device names/types instead of raw IPs — e.g. `| lookup device_inventory.csv ip AS src_ip OUTPUT hostname AS device_name`.
 
@@ -304,13 +309,16 @@ Rules 1 and 2 were converted from raw `index=` searches to `tstats` against Splu
 - **Event 7045 (service installation) returned 0 results when searched under `sourcetype=WinEventLog:Security`** — Service Control Manager events log to the **System** event log, not Security. Also, once found under `WinEventLog:System`, the relevant fields (`ServiceName`, `ServiceFileName`, `ServiceAccount`) weren't auto-extracted by the default Windows TA the way Security log fields are — required `rex` against `_raw` to pull them out manually.
 - **New CIM data models showed "no explicit index constraint" warnings, and editing the Data Model's own Constraints box didn't fix it** — the constraint box referenced a macro (`` `cim_Authentication_indexes` ``) rather than a literal index name. The actual fix was editing the macro's *definition* under `Settings → Advanced Search → Search Macros`, not the data model's constraint field itself.
 - **Migrating pfSense's WAN from NAT (VMnet8) to Bridged broke GUI access, syslog delivery to Splunk, and host-to-LAN DHCP — all from one adapter change, with the true root cause only surfacing days later.** Moving WAN off the NAT network removed pfSense's only route to the subnet where the Splunk server lived, which silently broke syslog forwarding with no error on either side; fixed by relocating the Splunk server into pfSense's own LAN network. That relocation then hit a DHCP failure (APIPA fallback) that looked like VMware's built-in DHCP service competing with pfSense's — disabling it was a correct hygiene fix but turned out to be coincidental, not the actual cause. The real root cause, found only when the identical symptom recurred on a second, unrelated host (the Splunk server itself): pfSense's DHCP **Address Pool Range was misconfigured to `192.168.1.x`, entirely unrelated to the LAN's actual `10.0.20.0/24` subnet** — meaning the DHCP server could never hand out a lease to anyone on that interface, regardless of client or VMware settings. Corrected the pool to `10.0.20.101–200`, added a static DHCP mapping for the Splunk server (`10.0.20.100`) to keep its address permanent for the forwarders and syslog target that reference it by IP. Full writeup: [troubleshooting-pfsense-bridged-wan-dhcp-conflict.md](docs/troubleshooting-pfsense-bridged-wan-dhcp-conflict.md)
-- **pfSense's `dpinger` (WAN gateway monitor) syslog events arrive duplicated in Splunk** — identical `_raw` content, identical microsecond timestamp, roughly double the expected volume. Investigated as a possible overlap between `Remote Syslog Contents` categories (`System Events` and `Gateway Monitor Events` both checked, and `dpinger` may log to a facility both match), but disabling `System Events` didn't resolve it. Confirmed via `| stats count by _raw | where count > 1` that **`filterlog` (the Firewall Events data Rules 4/5 depend on) is not affected** — only `dpinger`/gateway-monitor-related events showed the duplication. Root cause not fully diagnosed given it doesn't impact any current detection rule; worked around with `dedup _raw` at search time as a defensive habit for any future `index=pfsense` query, rather than continuing to chase a root cause with no practical impact on the lab.
 - **CIM `Change` data model tagging looked successful but `tstats` still returned nothing usable for Rule 3** — see Rule 3's write-up and the CIM/tstats Migration section above. Root cause: `Settings → Tags` only tags an *event*; the CIM `Change` model separately requires field-level extraction (`object`, `object_category`) that the standard Windows TA doesn't provide for Service Control Manager events, so a correctly-tagged event still lands in the model without the fields needed to actually filter for it.
 - **Kali (`KALI-OPS01`, Zone 5) had no route to any other lab zone** — this was intentional pfSense isolation, not a bug, but had to be deliberately undone to validate Rule 5's port-scan simulation. Required adding a 4th NIC to `PFSENSE01`, a new `OPT2` interface, and an explicit firewall rule, since pfSense's deny-by-default posture blocks inter-zone traffic until a rule is added — the same principle documented earlier for VMnet3/VMnet4 isolation.
+- **pfSense's `dpinger` (WAN gateway monitor) syslog events arrive duplicated in Splunk — and the message content itself turned out to be a real signal, not just noise.** Initially investigated purely as a duplication/logging problem (identical `_raw`, identical microsecond timestamp) and dismissed as low-priority since it didn't affect Rule 4/5's `filterlog` data. **Correction, found later:** the actual message content — `sendto error: 64` — is FreeBSD's `EHOSTDOWN` errno, meaning `dpinger` was correctly reporting a real, recurring failure to reach the WAN gateway the whole time. This had been dismissed as uninteresting log noise for most of the project, when it was actually an early warning sign of the WAN stability issue described in the next entry. **Lesson: investigate what a duplicated/noisy log message actually says before concluding it's safe to ignore** — the duplication and the content are separate questions, and this project initially only asked the first one.
+- **The entire lab's outbound internet access failed while setting up the VirusTotal scripted lookup — root cause was Wi-Fi-as-WAN instability, not the new script.** The VT lookup script failed with a DNS resolution error (`Name or service not known`); investigation ruled out the script, the API key, pfSense's NAT rules (Automatic mode, correctly configured with existing traffic counters proving it had worked before), and the LAN firewall rules (also correctly configured, with historical pass-through traffic logged) — before finding `pfSense → Status → Gateways` showing `WAN_DHCP: Offline, 100% packet loss`, despite the WAN interface itself reporting `Status: Up`. A direct ping from pfSense's own WAN interface to the Cellcom gateway confirmed 100% loss at the link level. Root cause: the host's Wi-Fi adapter (bridged to pfSense's WAN per the earlier NAT→Bridged migration) had disconnected — a known risk of using Wi-Fi, rather than wired Ethernet, for a WAN uplink expected to run unattended, since Windows power management, roaming behavior, and general Wi-Fi instability can drop the link with no obvious symptom on the host itself. Fixed short-term by reconnecting Wi-Fi and disabling adapter/Windows power-saving settings; the durable fix (not yet implemented) is a dedicated USB-Ethernet adapter for pfSense's WAN, isolating it from the host's own network usage and from Wi-Fi's inherent instability entirely.
 
 ## Lab Hygiene
 
 Every simulation follows the same pattern: snapshot both VMs before testing, create a disposable, clearly-named test account (`simtest`, `simlateral`) for the simulation, and remove both the account and any elevated group membership immediately after validation is complete and screenshots are captured. No test account is left provisioned longer than the testing session that needed it.
+
+**Secrets handling:** the VirusTotal API key used by Rule 4's enrichment script is stored in a local-only file on the Splunk server (`vt_api_key.txt`, `chmod 600`), never committed to this repository, and never hardcoded in the script itself.
 
 ## Roadmap
 
@@ -320,18 +328,21 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 - [x] Rule 1 (Brute Force Detection) — validated end-to-end, converted to `tstats`
 - [x] Rule 2 (Successful Login After Multiple Failures) — validated end-to-end, converted to `tstats`
 - [x] Rule 3 (Lateral Movement via PsExec) — validated end-to-end
-- [x] Rule 4 (Outbound Traffic to High-Risk Countries) — validated end-to-end, false-positive limitation documented (2/2 confirmed false positives)
+- [x] Rule 4 (Outbound Traffic to High-Risk Countries) — validated end-to-end, false-positive limitation documented and mitigated with live VirusTotal enrichment
 - [x] Rule 5 (Port Scan Detection) — validated end-to-end, required extending lab topology to Zone 5
 - [x] CIM Add-on installed, Authentication/Change data models configured and verified
-- [x] pfSense WAN migrated from VMware NAT to Bridged mode, receiving a private IP directly from the upstream Cellcom router
+- [x] pfSense WAN migrated to Bridged (real ISP-assigned IP)
 - [x] pfSense syslog → Splunk integration (Firewall/System/DHCP events)
 - [x] pfSense DHCP root cause fixed (Address Pool Range corrected); static mapping added for Splunk server
 - [x] Device inventory lookup built from nmap sweep, integrated into traffic queries
 - [x] Rule 3 `tstats`/CIM `Change` conversion investigated — deliberately kept as raw search (TA field-extraction gap documented)
 - [x] Zone 5 (Kali) connected to Zone 2 via new pfSense interface, for controlled attack-simulation testing
-- [ ] Add live IP reputation lookup (VirusTotal/AbuseIPDB) to Rule 4 to reduce geo-IP false positives
+- [x] Live IP reputation lookup (VirusTotal) added to Rule 4 via custom scripted lookup
+- [x] Investigated Shodan InternetDB as a free IP-enrichment source — coverage too sparse for arbitrary IPs (confirmed working correctly against known IPs like `8.8.8.8`, but returned no data for both the lab's own public IP and Rule 4's flagged IPs); pivoted to VirusTotal instead
+- [ ] Diagnose root cause of pfSense `dpinger` syslog duplication (non-blocking — message content now understood and separately addressed via WAN stability fix, but the duplication itself is still unexplained)
+- [ ] Replace Wi-Fi WAN uplink with dedicated wired Ethernet adapter for pfSense, for long-term stability
 - [ ] Horizontal port scan detection (companion to Rule 5)
-- [ ] Diagnose root cause of pfSense `dpinger` syslog duplication (non-blocking)
+- [ ] Persistent cache (KV Store) for VirusTotal lookup results, replacing in-memory cache
 - [ ] Rules 6–10 (Authentication / Lateral Movement / Network category)
 - [ ] Rules 11–40 (Exfil/C2, Malware, Persistence)
 - [ ] Full attack scenarios (phishing → lateral movement → exfil)
