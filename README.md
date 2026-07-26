@@ -6,6 +6,18 @@ A self-built enterprise-style Security Operations Center lab — Active Director
 
 Built to go beyond "I know what a SIEM is" — this lab documents real detections I wrote, real attacks I ran against my own environment to trigger them, and the actual troubleshooting behind getting an IT network + SIEM pipeline working end to end (including bugs most tutorials skip over, like ZFS boot failures and timezone-induced timestamp corruption).
 
+Splunk
+Detection Engineering
+MITRE ATT&CK
+Active Directory
+Sysmon
+PowerShell
+VMware
+pfSense
+SOC
+Blue Team
+
+
 ## Architecture
 
 ```
@@ -16,9 +28,115 @@ Zone 5 (SENSOR/ATTACK, 10.0.50.0/24) ── KALI-OPS01 (Red Team platform)
 Zone 6 (Gateway)                ── PFSENSE01 (Bridged WAN → real ISP-assigned IP; routes + firewalls between zones)
 ```
 
+                                    Internet
+                                        │
+                                        │
+                             ISP Router (Bridged WAN)
+                                        │
+                                        │
+                                ┌─────────────────┐
+                                │     pfSense     │
+                                │ Firewall / NAT  │
+                                │ Routing / DHCP  │
+                                └────────┬────────┘
+                                         │
+          ┌──────────────────────────────┼──────────────────────────────┐
+          │                              │                              │
+          │                              │                              │
+  Zone 2 – Servers               Zone 3 – Clients              Zone 5 – Attack
+   10.0.20.0/24                  10.0.30.0/24                  10.0.50.0/24
+          │                              │                              │
+   ┌──────────────┐             ┌──────────────┐              ┌──────────────┐
+   │    DC01      │             │   WIN-CL01   │              │ KALI-OPS01   │
+   │ Active Dir.  │             │ Windows 11   │              │ Kali Linux   │
+   │ DNS          │             │ Sysmon       │              │ Nmap         │
+   └──────────────┘             └──────────────┘              │ PsExec       │
+                                                             │ Attack Sim.  │
+                                                             └──────────────┘
+
+   ┌──────────────┐             ┌──────────────┐
+   │  SPLUNK01    │             │   WIN-CL02   │
+   │ Splunk Ent.  │             │ Windows 11   │
+   │ Syslog       │             │ Sysmon       │
+   │ UF Receiver  │             └──────────────┘
+   └──────────────┘
+
+
+Enterprise-style segmented SOC lab built on VMware, pfSense and Splunk.
+
+
+
 All internal zones are isolated VMware Host-Only networks; pfSense is the only path between them, with explicit firewall rules per zone (deny-by-default). WAN is Bridged directly to a physical Wi-Fi adapter on the host, giving pfSense a real, ISP-routable IP address instead of a NAT-translated one — this was a deliberate change to enable genuine inbound/outbound traffic visibility. This choice has a real downside (see Notable Troubleshooting: Wi-Fi as WAN is less stable than a wired uplink would be). Zone 5 (Kali) was initially isolated with no route to any other zone by design; a dedicated `OPT2` interface and firewall rule were added later specifically to support Rule 5's port-scan simulation.
 
 *(Add your network diagram image here — screenshots/network-architecture.png)*
+
+# Skills Demonstrated
+
+This project demonstrates practical SOC, SIEM and Detection Engineering skills through a fully self-built enterprise lab.
+
+## Detection Engineering
+
+- Detection logic development
+- SPL optimization
+- Raw Search → tstats migration
+- CIM normalization
+- MITRE ATT&CK mapping
+- Correlation search design
+- False-positive analysis
+
+## SIEM
+
+- Splunk Enterprise
+- Data Models
+- CIM
+- Event Types
+- Tags
+- Lookups
+- Search Macros
+- Scheduled Searches
+- Alerts
+- Dashboards
+
+## Windows Security
+
+- Active Directory
+- Windows Event Logs
+- Sysmon
+- Group Policy
+- Windows Authentication
+- Service Control Manager
+- PowerShell
+
+## Network Security
+
+- pfSense
+- Network Segmentation
+- Firewall Rules
+- Syslog
+- DHCP
+- DNS
+- VMware Networking
+
+## Threat Detection
+
+- Brute Force
+- Lateral Movement
+- Port Scanning
+- Geo-IP Monitoring
+- PsExec
+- MITRE ATT&CK
+
+## Investigation
+
+- Root Cause Analysis
+- Troubleshooting
+- False Positive Reduction
+- Log Validation
+- Detection Tuning
+
+
+
+
 
 ## Stack
 
@@ -350,5 +468,25 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 
 ## About
 
-Built by Daniel Luchter as a hands-on SOC Analyst / Detection Engineering skills project.
-Currently a SOC Analyst working with Splunk, QRadar CE, Security Onion, and Wazuh in a "SIEM of SIEMs" IT/OT environment.
+# About Me
+
+Hi, I'm Daniel.
+
+I'm a SOC Analyst with hands-on experience designing, building and maintaining SIEM environments and detection logic.
+
+This repository documents my personal Detection Engineering portfolio and enterprise lab, where every detection is built, validated, investigated and documented end-to-end.
+
+Current focus:
+
+• Splunk Enterprise
+• Detection Engineering
+• Threat Hunting
+• Google Security Operations
+• Blue Team Operations
+• Enterprise SOC
+
+LinkedIn: https://www.linkedin.com/in/danielluchter/
+
+GitHub: https://github.com/DykL57/
+
+
