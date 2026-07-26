@@ -28,39 +28,22 @@ Zone 5 (SENSOR/ATTACK, 10.0.50.0/24) ── KALI-OPS01 (Red Team platform)
 Zone 6 (Gateway)                ── PFSENSE01 (Bridged WAN → real ISP-assigned IP; routes + firewalls between zones)
 ```
 
-                                    Internet
-                                        │
-                                        │
-                             ISP Router (Bridged WAN)
-                                        │
-                                        │
-                                ┌─────────────────┐
-                                │     pfSense     │
-                                │ Firewall / NAT  │
-                                │ Routing / DHCP  │
-                                └────────┬────────┘
-                                         │
-          ┌──────────────────────────────┼──────────────────────────────┐
-          │                              │                              │
-          │                              │                              │
-  Zone 2 – Servers               Zone 3 – Clients              Zone 5 – Attack
-   10.0.20.0/24                  10.0.30.0/24                  10.0.50.0/24
-          │                              │                              │
-   ┌──────────────┐             ┌──────────────┐              ┌──────────────┐
-   │    DC01      │             │   WIN-CL01   │              │ KALI-OPS01   │
-   │ Active Dir.  │             │ Windows 11   │              │ Kali Linux   │
-   │ DNS          │             │ Sysmon       │              │ Nmap         │
-   └──────────────┘             └──────────────┘              │ PsExec       │
-                                                             │ Attack Sim.  │
-                                                             └──────────────┘
-
-   ┌──────────────┐             ┌──────────────┐
-   │  SPLUNK01    │             │   WIN-CL02   │
-   │ Splunk Ent.  │             │ Windows 11   │
-   │ Syslog       │             │ Sysmon       │
-   │ UF Receiver  │             └──────────────┘
-   └──────────────┘
-
+                 🌍 Internet
+                      │
+                ISP Router
+                      │
+                VMware Bridge
+                      │
+                 🛡️ pfSense
+          Firewall • NAT • Routing
+            ┌──────────┼──────────┐
+            │          │          │
+            │          │          │
+       🖥️ Servers   💻 Clients   ⚔️ Attack
+             │          │          │
+            DC01          WIN-CL01    Kali
+          Splunk        WIN-CL02    Nmap
+            DNS           Sysmon      PsExec
 
 Enterprise-style segmented SOC lab built on VMware, pfSense and Splunk.
 
