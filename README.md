@@ -25,25 +25,24 @@ Zone 2 (SERVERS, 10.0.20.0/24)  ── DC01 (Active Directory, lab.local)
                                   ── SPLUNK01 (Splunk Enterprise, 10.0.20.100 — static DHCP mapping)
 Zone 3 (CLIENTS, 10.0.30.0/24)  ── WIN-CL01, WIN-CL02
 Zone 5 (SENSOR/ATTACK, 10.0.50.0/24) ── KALI-OPS01 (Red Team platform)
-Zone 6 (Gateway)                ── PFSENSE01 (Bridged WAN → real ISP-assigned IP; routes + firewalls between zones)
+Zone 6 (Gateway)                ── PFSENSE01 (Bridged WAN → rprivate IP from upstream Cellcom router; routes + firewalls between zones)
 ```
 
-                 🌍 Internet
-                      │
-                ISP Router
-                      │
-                VMware Bridge
-                      │
-                 🛡️ pfSense
-          Firewall • NAT • Routing
-            ┌──────────┼──────────┐
-            │          │          │
-            │          │          │
-       🖥️ Servers   💻 Clients   ⚔️ Attack
-             │          │          │
-            DC01          WIN-CL01    Kali
-            Splunk        WIN-CL02    Nmap
-            DNS           Sysmon      PsExec
+                      🌍 Internet
+                             │
+                      Cellcom Router
+                             │
+                    VMware Bridged WAN
+                             │
+                        🛡️ pfSense
+                Firewall • NAT • Routing
+              ┌──────────────┼──────────────┐
+              │              │              │
+         🖥️ Servers      💻 Clients      ⚔️ Attack
+              │              │              │
+             DC01         WIN-CL01         Kali
+             Splunk       WIN-CL02         Nmap
+             DNS          Sysmon           PsExec
 
 Enterprise-style segmented SOC lab built on VMware, pfSense and Splunk.
 
@@ -55,68 +54,14 @@ All internal zones are isolated VMware Host-Only networks; pfSense is the only p
 
 # Skills Demonstrated
 
-This project demonstrates practical SOC, SIEM and Detection Engineering skills through a fully self-built enterprise lab.
+## Skills Demonstrated
 
-## Detection Engineering
-
-- Detection logic development
-- SPL optimization
-- Raw Search → tstats migration
-- CIM normalization
-- MITRE ATT&CK mapping
-- Correlation search design
-- False-positive analysis
-
-## SIEM
-
-- Splunk Enterprise
-- Data Models
-- CIM
-- Event Types
-- Tags
-- Lookups
-- Search Macros
-- Scheduled Searches
-- Alerts
-- Dashboards
-
-## Windows Security
-
-- Active Directory
-- Windows Event Logs
-- Sysmon
-- Group Policy
-- Windows Authentication
-- Service Control Manager
-- PowerShell
-
-## Network Security
-
-- pfSense
-- Network Segmentation
-- Firewall Rules
-- Syslog
-- DHCP
-- DNS
-- VMware Networking
-
-## Threat Detection
-
-- Brute Force
-- Lateral Movement
-- Port Scanning
-- Geo-IP Monitoring
-- PsExec
-- MITRE ATT&CK
-
-## Investigation
-
-- Root Cause Analysis
-- Troubleshooting
-- False Positive Reduction
-- Log Validation
-- Detection Tuning
-
+**Detection Engineering:** SPL, raw search → tstats migration, CIM normalization, MITRE ATT&CK mapping, false-positive analysis
+**SIEM (Splunk):** Data Models, Event Types, Tags, Lookups, Search Macros, Alerts
+**Windows Security:** Active Directory, Event Logs, Sysmon, Group Policy, PowerShell
+**Network Security:** pfSense, Segmentation, Firewall Rules, Syslog, DHCP/DNS
+**Threat Detection:** Brute Force, Lateral Movement, Port Scanning, Geo-IP Monitoring
+**Investigation:** Root Cause Analysis, Log Validation, Detection Tuning
 
 
 
@@ -126,8 +71,7 @@ This project demonstrates practical SOC, SIEM and Detection Engineering skills t
 | Component | Role |
 |---|---|
 | Windows Server 2022 | Active Directory Domain Services + DNS (DC01) |
-| pfSense CE 2.8.1 | Inter-zone routing + firewall, Bridged WAN with real ISP IP |
-| Splunk Enterprise (Rocky Linux) | SIEM — log aggregation, correlation, alerting |
+| pfSense CE 2.8.1 | Inter-zone routing + firewall, Bridged WAN receiving a private IP directly from the upstream router (not double-NATed) || Splunk Enterprise (Rocky Linux) | SIEM — log aggregation, correlation, alerting |
 | Splunk Universal Forwarder + Sysmon | Endpoint telemetry (DC01, WIN-CL01, WIN-CL02) |
 | Splunk Common Information Model (CIM) Add-on | Normalizes raw events into standard data models for `tstats`-accelerated searching |
 | Splunk `iplocation` (built-in) | Geo-IP enrichment for network-based detections, no add-on required |
@@ -243,8 +187,8 @@ index=wineventlog sourcetype=WinEventLog:Security (EventCode=4625 OR EventCode=4
 ```powershell
 $domain = "lab.local"
 $user   = "simtest"
-$badPassword = "WrongPassword123"
-$goodPassword = "P@ssw0rd2026!"
+$badPassword = "<INTENTIONALLY_INVALID_PASSWORD>"
+$goodPassword = Read-Host "Enter the lab account password" -AsSecureString
 
 # 5 failed attempts
 1..5 | ForEach-Object {
@@ -432,7 +376,7 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 - [x] Rule 4 (Outbound Traffic to High-Risk Countries) — validated end-to-end, false-positive limitation documented and mitigated with live VirusTotal enrichment
 - [x] Rule 5 (Port Scan Detection) — validated end-to-end, required extending lab topology to Zone 5
 - [x] CIM Add-on installed, Authentication/Change data models configured and verified
-- [x] pfSense WAN migrated to Bridged (real ISP-assigned IP)
+- [x] pfSense WAN migrated from VMware NAT to Bridged mode, receiving a private IP directly from the upstream Cellcom router
 - [x] pfSense syslog → Splunk integration (Firewall/System/DHCP events)
 - [x] pfSense DHCP root cause fixed (Address Pool Range corrected); static mapping added for Splunk server
 - [x] Device inventory lookup built from nmap sweep, integrated into traffic queries
@@ -449,9 +393,8 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 - [ ] Full attack scenarios (phishing → lateral movement → exfil)
 - [ ] IBM QRadar (next SIEM platform after Splunk)
 
-## About
 
-# About Me
+## About Me
 
 Hi, I'm Daniel.
 
