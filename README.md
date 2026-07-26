@@ -323,7 +323,7 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 - [x] Rule 4 (Outbound Traffic to High-Risk Countries) — validated end-to-end, false-positive limitation documented (2/2 confirmed false positives)
 - [x] Rule 5 (Port Scan Detection) — validated end-to-end, required extending lab topology to Zone 5
 - [x] CIM Add-on installed, Authentication/Change data models configured and verified
-- [x] pfSense WAN migrated to Bridged (real ISP-assigned IP)
+- [x] pfSense WAN migrated from VMware NAT to Bridged mode, receiving a private IP directly from the upstream Cellcom router
 - [x] pfSense syslog → Splunk integration (Firewall/System/DHCP events)
 - [x] pfSense DHCP root cause fixed (Address Pool Range corrected); static mapping added for Splunk server
 - [x] Device inventory lookup built from nmap sweep, integrated into traffic queries
