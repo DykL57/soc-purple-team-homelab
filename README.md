@@ -51,11 +51,15 @@ Enterprise-style segmented SOC lab built on VMware, pfSense and Splunk.
 
 
 
-All internal zones are isolated VMware Host-Only networks; pfSense is the only path between them, with explicit firewall rules per zone (deny-by-default). WAN is Bridged directly to a physical Wi-Fi adapter on the host, giving pfSense a real, ISP-routable IP address instead of a NAT-translated one — this was a deliberate change to enable genuine inbound/outbound traffic visibility. This choice has a real downside (see Notable Troubleshooting: Wi-Fi as WAN is less stable than a wired uplink would be). Zone 5 (Kali) was initially isolated with no route to any other zone by design; a dedicated `OPT2` interface and firewall rule were added later specifically to support Rule 5's port-scan simulation.
+All internal zones are isolated VMware Host-Only networks. pfSense is the only routing path between them, with explicit firewall rules applied to each zone using a deny-by-default policy.
+
+The pfSense WAN interface is bridged to the host's physical Wi-Fi adapter and receives a private IP address directly from the upstream Cellcom router. This removes VMware NAT from the traffic path, although the Cellcom router still performs NAT toward the Internet.
+
+This design gives pfSense direct visibility into traffic entering and leaving the lab through the upstream physical network while avoiding VMware's internal NAT layer. Using Wi-Fi as the WAN uplink has a practical downside: it is less stable than a wired Ethernet connection, as described in the Notable Troubleshooting section.
+
+Zone 5, which hosts Kali Linux, was initially isolated with no route to the other internal zones by design. A dedicated OPT2 interface and a narrowly scoped firewall rule were later added specifically to support the port-scan simulation used for Rule 5.
 
 ![Network Architecture Diagram](screenshots//Network-Architecture-Diagram_2.png)
-
-# Skills Demonstrated
 
 ## Skills Demonstrated
 
