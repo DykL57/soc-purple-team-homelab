@@ -93,7 +93,8 @@ Each rule below follows the same format: detection logic, SPL, how it was trigge
 | 3 | Lateral Movement via Remote Service Creation (PsExec) | T1021.002 / T1569.002 | Lateral Movement | Raw search (`rex` extraction) | ✅ Validated |
 | 4 | Outbound Traffic to High-Risk Countries | T1071 / TA0011 | Network — Anomalous Outbound Traffic | Raw search + `iplocation` + VirusTotal lookup | ✅ Validated |
 | 5 | Port Scan Detection (High Port-Touch Volume) | T1046 | Network — Reconnaissance | Raw search (`rex` + `stats`) | ✅ Validated |
-| 6–50 | See [detection-rules/](detection-rules/) | — | — | — | ⏳ Planned |
+| 6 | Brute Force — Local Administrator Account (SMB) | T1110.001 | Credential Access | Raw search (`rex` extraction) | ✅ Validated |
+| 7–50 | See [detection-rules/](detection-rules/) | — | — | — | ⏳ Planned |
 
 ### Rule 1 — Brute Force Detection (Authentication)
 
@@ -322,6 +323,46 @@ nmap -sS -p 1-1000 10.0.20.1
 
 ---
 
+### Rule 6 — Brute Force: Local Administrator Account (SMB)
+
+**Detection logic:** Detects sustained password-guessing attempts against the **built-in local `administrator` account** via SMB, aggregating failed logon events (Event 4625) by source IP and target user, with a failure-code breakdown to confirm the pattern is genuine password guessing rather than username enumeration.
+
+**SPL:**
+```spl
+index=wineventlog EventCode=4625 Channel=Security host=WIN-CL01
+| rex field=_raw "Name='TargetUserName'>(?<TargetUserName>[^<]*)"
+| rex field=_raw "Name='IpAddress'>(?<IpAddress>[^<]+)"
+| rex field=_raw "Name='LogonType'>(?<LogonType>[^<]+)"
+| rex field=_raw "Name='SubStatus'>(?<SubStatus>[^<]+)"
+| stats count as failed_attempts, values(SubStatus) as SubStatus_codes, earliest(_time) as first_attempt, latest(_time) as last_attempt by IpAddress, TargetUserName
+| where failed_attempts > 10 AND (TargetUserName="administrator" OR TargetUserName="Administrator")
+| eval first_attempt=strftime(first_attempt, "%Y-%m-%d %H:%M:%S"), last_attempt=strftime(last_attempt, "%Y-%m-%d %H:%M:%S")
+| sort - failed_attempts
+```
+
+**Kept as a raw search, not converted to `tstats` — see CIM `src` investigation below.**
+
+**Simulation used to trigger it (KALI-OPS01 → WIN-CL01, using NetExec):**
+```bash
+nxc smb 10.0.30.100 -u administrator -p /usr/share/wordlists/rockyou.txt --ignore-pw-decoding
+```
+
+![Rule 6 Attack Simulation](screenshots/rule06-alert.png)
+
+**Result:** 2,651 failed logon attempts from `10.0.50.60` (KALI-OPS01) against the local `administrator` account on WIN-CL01, spanning roughly 16.5 hours (`2026-07-27 16:55:02` → `2026-07-28 09:33:05`), all with `SubStatus=0xc000006a` (`STATUS_WRONG_PASSWORD`) — confirming the target username was valid and constant throughout, i.e. genuine password guessing against a single known account rather than username enumeration.
+
+![Rule 6 Detection Result](screenshots/rule06-alert-results.png)
+
+**Notable finding:** the built-in local **Administrator** account (RID 500) is **exempt from account lockout policy by default** on Windows — this is why 2,651 failed attempts accumulated without the account ever locking, unlike a standard domain user. This is a hardening recommendation in its own right: rename or disable the built-in Administrator account, or enforce lockout against it explicitly via GPO. Separately, NetExec's connection banner also flagged `signing:False` and `SMBv1:None` on WIN-CL01 — SMB Signing being disabled is an unrelated finding that enables NTLM relay attacks.
+
+**CIM `src` field — investigated, not resolved, documented as a known limitation.** Attempted to migrate this rule to `tstats` against the `Authentication` data model for performance. An `EXTRACT-ipaddress` in `props.conf` correctly pulled `IpAddress` from the raw XML, but `Authentication.src` resolved to the source **WorkstationName** (`KALI-OPS01`) rather than the IP itself — a `Splunk_TA_windows` CIM-mapping behavior. Attempted to override this with both `FIELDALIAS-src_ip = IpAddress AS src` and, after that had no effect, a direct `EVAL-src = IpAddress` — neither populated `src`. Ruled out LOOKUP, TRANSFORMS, and REPORT stanzas as the cause via `btool props list XmlWinEventLog --debug`, none of which reference `src`. An identically-structured `EVAL` under a different field name (`EVAL-attacker_ip = IpAddress`) worked immediately on the same input, confirming the extraction logic itself was correct — `src` specifically did not take the override, for a reason not fully root-caused. This rule uses raw `rex`/`stats` on `IpAddress` as a documented workaround; a future rule may adopt the working `attacker_ip` custom field for `tstats`-based detections instead of fighting `src` directly.
+
+![Rule 6 CIM Investigation](screenshots/rule06-cim-debug.png)
+
+**What I'd tune in production:** exclude the built-in Administrator account from being SMB-reachable at all where possible (LAPS + disabled remote use of the local admin account is the actual fix, not just detecting attempts against it); correlate with `LogonType` and `signing`/`SMBv1` status to also surface the NTLM-relay exposure in the same alert; resolve the `Authentication.src` mapping gap so this rule (and future ones) can run on `tstats` instead of raw search.
+
+---
+
 ## Network Traffic Monitoring
 
 pfSense forwards Firewall, System, and DHCP events to Splunk via syslog (UDP 5514), indexed separately from Windows telemetry (`index=pfsense`, sourcetype `pfsense:firewall`). This gives visibility into real inbound/outbound traffic at the network edge — allow/block decisions, source/destination IPs and ports, and (via Rule 4) geo-IP + live reputation context — complementing the Windows-endpoint-focused detections in Rules 1–3. Getting this pipeline working end-to-end (WAN topology, DHCP, and forwarding) surfaced a substantial troubleshooting exercise; see below.
@@ -378,6 +419,7 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 - [x] Rule 3 (Lateral Movement via PsExec) — validated end-to-end
 - [x] Rule 4 (Outbound Traffic to High-Risk Countries) — validated end-to-end, false-positive limitation documented and mitigated with live VirusTotal enrichment
 - [x] Rule 5 (Port Scan Detection) — validated end-to-end, required extending lab topology to Zone 5
+- [x] Rule 6 (Brute Force — Local Administrator Account, SMB) — validated end-to-end; CIM `Authentication.src` mapping gap investigated and documented as a known limitation
 - [x] CIM Add-on installed, Authentication/Change data models configured and verified
 - [x] pfSense WAN migrated from VMware NAT to Bridged mode, receiving a private IP directly from the upstream Cellcom router
 - [x] pfSense syslog → Splunk integration (Firewall/System/DHCP events)
@@ -388,6 +430,7 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 - [x] Live IP reputation lookup (VirusTotal) added to Rule 4 via custom scripted lookup
 - [x] Investigated Shodan InternetDB as a free IP-enrichment source — coverage too sparse for arbitrary IPs (confirmed working correctly against known IPs like `8.8.8.8`, but returned no data for both the lab's own public IP and Rule 4's flagged IPs); pivoted to VirusTotal instead
 - [ ] Diagnose root cause of pfSense `dpinger` syslog duplication (non-blocking — message content now understood and separately addressed via WAN stability fix, but the duplication itself is still unexplained)
+- [ ] Root-cause why `Authentication.src` specifically won't take a `FIELDALIAS`/`EVAL` override on `XmlWinEventLog`, despite an identical `EVAL` under a different field name working immediately (Rule 6); migrate Rule 6 to `tstats` once resolved
 - [ ] Replace Wi-Fi WAN uplink with dedicated wired Ethernet adapter for pfSense, for long-term stability
 - [ ] Horizontal port scan detection (companion to Rule 5)
 - [ ] Persistent cache (KV Store) for VirusTotal lookup results, replacing in-memory cache
