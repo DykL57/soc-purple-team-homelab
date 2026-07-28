@@ -30,19 +30,22 @@ Zone 6 (Gateway)                ── PFSENSE01 (Bridged WAN → rprivate IP fr
 
                       🌍 Internet
                              │
-                      Cellcom Router
+                       Cellcom Router
                              │
-                    VMware Bridged WAN
+                     VMware Bridged WAN
                              │
                         🛡️ pfSense
-                Firewall • NAT • Routing
+                Firewall • NAT • Routing • DHCP
               ┌──────────────┼──────────────┐
               │              │              │
          🖥️ Servers      💻 Clients      ⚔️ Attack
               │              │              │
-             DC01         WIN-CL01         Kali
-             Splunk       WIN-CL02         Nmap
-             DNS          Sysmon           PsExec
+            DC01         WIN-CL01          Kali
+           Splunk        WIN-CL02       (KALI-OPS01)
+                                              │
+          AD • DNS      Domain-joined    Hydra • nxc
+         Log indexer     Win10 targets   nmap • Impacket
+                                          Mimikatz
 
 Enterprise-style segmented SOC lab built on VMware, pfSense and Splunk.
 
