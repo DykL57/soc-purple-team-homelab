@@ -79,8 +79,8 @@ Zone 5, which hosts Kali Linux, was initially isolated with no route to the othe
 | Component | Role |
 |---|---|
 | Windows Server 2022 | Active Directory Domain Services + DNS (DC01) |
-| pfSense CE 2.8.1 | Inter-zone routing + firewall, Bridged WAN receiving a private IP directly from the upstream router (not double-NATed) || Splunk Enterprise (Rocky Linux) 
-| SIEM — log aggregation, correlation, alerting |
+| pfSense CE 2.8.1 | Inter-zone routing + firewall, Bridged WAN receiving a private IP directly from the upstream router (not double-NATed) |
+| Splunk Enterprise (Rocky Linux) | SIEM — log aggregation, correlation, alerting |
 | Splunk Universal Forwarder + Sysmon | Endpoint telemetry (DC01, WIN-CL01, WIN-CL02) |
 | Splunk Common Information Model (CIM) Add-on | Normalizes raw events into standard data models for `tstats`-accelerated searching |
 | Splunk `iplocation` (built-in) | Geo-IP enrichment for network-based detections, no add-on required |
