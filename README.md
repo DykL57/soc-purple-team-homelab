@@ -17,6 +17,18 @@ pfSense
 SOC
 Blue Team
 
+# 🚀 Quick Navigation
+
+- 🏗️ [Architecture](#architecture)
+- 💻 [Technology Stack](#technology-stack)
+- 🎯 [Skills Demonstrated](#skills-demonstrated)
+- 🛡️ [Detection Rules](#detection-rules)
+- 🌐 [Network Monitoring](#network-traffic-monitoring)
+- ⚡ [CIM & tstats Migration](#cim--tstats-migration)
+- 🔧 [Troubleshooting](#notable-troubleshooting-worth-reading-if-youre-building-something-similar)
+- 🧹 [Lab Hygiene](#lab-hygiene)
+- 🗺️ [Roadmap](#roadmap)
+- 👨‍💻 [About Me](#about-me)
 
 ## Architecture
 
@@ -62,6 +74,10 @@ Zone 5, which hosts Kali Linux, was initially isolated with no route to the othe
 
 ![Network Architecture Diagram](screenshots//Network-Architecture-Diagram_2.png)
 
+<p align="right">
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
+
 ## Skills Demonstrated
 
 **Detection Engineering:** SPL, raw search → tstats migration, CIM normalization, MITRE ATT&CK mapping, false-positive analysis
@@ -87,6 +103,7 @@ Zone 5, which hosts Kali Linux, was initially isolated with no route to the othe
 | Custom VirusTotal scripted lookup (Python) | Live IP reputation enrichment for Rule 4, reducing reliance on stale geo-IP data |
 | Kali Linux | Red Team attack platform |
 | VMware Workstation | Virtualization + network segmentation |
+| Suricata | IDS/IPS with Emerging Threats rules for network-based detection and validation |
 
 ## Detection Rules
 
@@ -367,6 +384,10 @@ nxc smb 10.0.30.100 -u administrator -p /usr/share/wordlists/rockyou.txt --ignor
 
 **What I'd tune in production:** exclude the built-in Administrator account from being SMB-reachable at all where possible (LAPS + disabled remote use of the local admin account is the actual fix, not just detecting attempts against it); correlate with `LogonType` and `signing`/`SMBv1` status to also surface the NTLM-relay exposure in the same alert; resolve the `Authentication.src` mapping gap so this rule (and future ones) can run on `tstats` instead of raw search.
 
+<p align="right">
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
+
 ---
 
 ## Network Traffic Monitoring
@@ -410,11 +431,19 @@ Rules 1 and 2 were converted from raw `index=` searches to `tstats` against Splu
 - **pfSense's `dpinger` (WAN gateway monitor) syslog events arrive duplicated in Splunk — and the message content itself turned out to be a real signal, not just noise.** Initially investigated purely as a duplication/logging problem (identical `_raw`, identical microsecond timestamp) and dismissed as low-priority since it didn't affect Rule 4/5's `filterlog` data. **Correction, found later:** the actual message content — `sendto error: 64` — is FreeBSD's `EHOSTDOWN` errno, meaning `dpinger` was correctly reporting a real, recurring failure to reach the WAN gateway the whole time. This had been dismissed as uninteresting log noise for most of the project, when it was actually an early warning sign of the WAN stability issue described in the next entry. **Lesson: investigate what a duplicated/noisy log message actually says before concluding it's safe to ignore** — the duplication and the content are separate questions, and this project initially only asked the first one.
 - **The entire lab's outbound internet access failed while setting up the VirusTotal scripted lookup — root cause was Wi-Fi-as-WAN instability, not the new script.** The VT lookup script failed with a DNS resolution error (`Name or service not known`); investigation ruled out the script, the API key, pfSense's NAT rules (Automatic mode, correctly configured with existing traffic counters proving it had worked before), and the LAN firewall rules (also correctly configured, with historical pass-through traffic logged) — before finding `pfSense → Status → Gateways` showing `WAN_DHCP: Offline, 100% packet loss`, despite the WAN interface itself reporting `Status: Up`. A direct ping from pfSense's own WAN interface to the Cellcom gateway confirmed 100% loss at the link level. Root cause: the host's Wi-Fi adapter (bridged to pfSense's WAN per the earlier NAT→Bridged migration) had disconnected — a known risk of using Wi-Fi, rather than wired Ethernet, for a WAN uplink expected to run unattended, since Windows power management, roaming behavior, and general Wi-Fi instability can drop the link with no obvious symptom on the host itself. Fixed short-term by reconnecting Wi-Fi and disabling adapter/Windows power-saving settings; the durable fix (not yet implemented) is a dedicated USB-Ethernet adapter for pfSense's WAN, isolating it from the host's own network usage and from Wi-Fi's inherent instability entirely.
 
+<p align="right">
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
+
 ## Lab Hygiene
 
 Every simulation follows the same pattern: snapshot both VMs before testing, create a disposable, clearly-named test account (`simtest`, `simlateral`) for the simulation, and remove both the account and any elevated group membership immediately after validation is complete and screenshots are captured. No test account is left provisioned longer than the testing session that needed it.
 
 **Secrets handling:** the VirusTotal API key used by Rule 4's enrichment script is stored in a local-only file on the Splunk server (`vt_api_key.txt`, `chmod 600`), never committed to this repository, and never hardcoded in the script itself.
+
+<p align="right">
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
 
 ## Roadmap
 
@@ -436,6 +465,9 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 - [x] Zone 5 (Kali) connected to Zone 2 via new pfSense interface, for controlled attack-simulation testing
 - [x] Live IP reputation lookup (VirusTotal) added to Rule 4 via custom scripted lookup
 - [x] Investigated Shodan InternetDB as a free IP-enrichment source — coverage too sparse for arbitrary IPs (confirmed working correctly against known IPs like `8.8.8.8`, but returned no data for both the lab's own public IP and Rule 4's flagged IPs); pivoted to VirusTotal instead
+- [x]  Suricata installed and integrated into pfSense
+- [ ] Splunk ingestion of Suricata alerts
+- [ ] Suricata-based detection use cases
 - [ ] Diagnose root cause of pfSense `dpinger` syslog duplication (non-blocking — message content now understood and separately addressed via WAN stability fix, but the duplication itself is still unexplained)
 - [ ] Root-cause why `Authentication.src` specifically won't take a `FIELDALIAS`/`EVAL` override on `XmlWinEventLog`, despite an identical `EVAL` under a different field name working immediately (Rule 6); migrate Rule 6 to `tstats` once resolved
 - [ ] Replace Wi-Fi WAN uplink with dedicated wired Ethernet adapter for pfSense, for long-term stability
@@ -446,6 +478,9 @@ Every simulation follows the same pattern: snapshot both VMs before testing, cre
 - [ ] Full attack scenarios (phishing → lateral movement → exfil)
 - [ ] IBM QRadar (next SIEM platform after Splunk)
 
+<p align="right">
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
 
 ## About Me
 
@@ -463,6 +498,10 @@ Current focus:
 • Google Security Operations
 • Blue Team Operations
 • Enterprise SOC
+
+<p align="right">
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
 
 LinkedIn: https://www.linkedin.com/in/danielluchter/
 
