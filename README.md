@@ -113,16 +113,16 @@ Each detection rule follows a standardized methodology including threat scenario
 
 | ID | Rule | MITRE ATT&CK | Category | Search Method | Status |
 |----|------|--------------|----------|---------------|--------|
-| DET-001 | Brute Force Detection (Authentication) | T1110 | Credential Access | `tstats` (CIM Authentication) | ✅ Validated |
-| DET-002 | Successful Login After Multiple Failures | T1078 | Credential Access / Initial Access | `tstats` (CIM Authentication) | ✅ Validated |
-| DET-003 | Lateral Movement via Remote Service Creation (PsExec) | T1021.002 / T1569.002 | Lateral Movement | Raw search (`rex` extraction) | ✅ Validated |
-| DET-004 | Outbound Traffic to High-Risk Countries | T1071 / TA0011 | Network — Anomalous Outbound Traffic | Raw search + `iplocation` + VirusTotal lookup | ✅ Validated |
-| DET-005 | Port Scan Detection (High Port-Touch Volume) | T1046 | Network — Reconnaissance | Raw search (`rex` + `stats`) | ✅ Validated |
-| DET-006 | Brute Force — Local Administrator Account (SMB) | T1110.001 | Credential Access | Raw search (`rex` extraction) | ✅ Validated |
-| DET-007 | Suspicious Encoded PowerShell Execution | T1059.001 | Execution | Sysmon + Security + PowerShell | ✅ Production Ready |
+| DET-001 | [Brute Force Detection (Authentication)](#rule-1--brute-force-detection-authentication) | T1110 | Credential Access | `tstats` (CIM Authentication) | ✅ Validated |
+| DET-002 | [Successful Login After Multiple Failures](#rule-2--successful-login-after-multiple-failures) | T1078 | Credential Access / Initial Access | `tstats` (CIM Authentication) | ✅ Validated |
+| DET-003 | [Lateral Movement via Remote Service Creation (PsExec)](#rule-3--lateral-movement-via-remote-service-creation-psexec) | T1021.002 / T1569.002 | Lateral Movement | Raw Search | ✅ Validated |
+| DET-004 | [Outbound Traffic to High-Risk Countries](#rule-4--outbound-traffic-to-high-risk-countries) | T1071 | Network | Raw Search + VirusTotal | ✅ Validated |
+| DET-005 | [Port Scan Detection (High Port-Touch Volume)](#rule-5--port-scan-detection-high-port-touch-volume) | T1046 | Reconnaissance | Raw Search | ✅ Validated |
+| DET-006 | [Brute Force – Local Administrator Account (SMB)](#rule-6--brute-force-local-administrator-account-smb) | T1110.001 | Credential Access | Raw Search | ✅ Validated |
+| DET-007 | [Suspicious Encoded PowerShell Execution](#rule-7--suspicious-encoded-powershell-execution) | T1059.001 | Execution | Sysmon + Security + PowerShell | ✅ Production Ready |
 | DET-008 – DET-020 | Planned Detection Rules | Various | Multiple ATT&CK Tactics | Detection Engineering | ⏳ In Progress |
 
-### Rule 1 — Brute Force Detection (Authentication)
+### DET-001 — Brute Force Detection (Authentication)
 
 **Detection logic:** 3+ failed authentication attempts from a single host within a 5-minute window, with severity scored by volume (MEDIUM / HIGH / CRITICAL).
 
@@ -173,9 +173,14 @@ public class LogonTest {
 
 **What I'd tune in production:** raise the threshold to 5–10 (3 is intentionally low for lab-scale testing); add a lookup-based allowlist for known vulnerability scanners.
 
+<p align="right">
+<a href="#detection-rules">⬅ Back to Detection Rules</a> •
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
+
 ---
 
-### Rule 2 — Successful Login After Multiple Failures
+### DET-002 — Successful Login After Multiple Failures
 
 **Detection logic:** An account with 5+ failed logon attempts followed by a successful logon within the same 10-minute window — a pattern consistent with brute-force attempts that eventually succeed, or credential guessing against a privileged account.
 
@@ -240,9 +245,14 @@ Start-Process cmd.exe -Credential $cred -ArgumentList "/c exit"
 
 **What I'd tune in production:** exclude known noisy service accounts (`NOT Authentication.user IN ("svc_*", "krbtgt")`); raise the fail-count threshold in high-turnover/shared-workstation environments.
 
+<p align="right">
+<a href="#detection-rules">⬅ Back to Detection Rules</a> •
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
+
 ---
 
-### Rule 3 — Lateral Movement via Remote Service Creation (PsExec)
+### DET-003 — Lateral Movement via Remote Service Creation (PsExec)
 
 **Detection logic:** Detects installation of a new Windows service (Event 7045) on a domain-joined host — the mechanism PsExec and PsExec-style tools use to execute code remotely after obtaining valid credentials on another host. An attacker uses SMB admin shares (`ADMIN$`/`C$`) to drop a binary, then remotely creates and starts a service to run it.
 
@@ -280,9 +290,14 @@ Add-ADGroupMember -Identity "Domain Admins" -Members "simlateral"
 
 **What I'd tune in production:** allowlist known legitimate remote-deployment accounts/hosts (SCCM, help desk tooling); use the broader `ServiceName`-agnostic version of the query, since real attackers rename the binary; pair with Sysmon Event ID 1 and Event 5145 (admin share access) for a full kill-chain view in one notable event.
 
+<p align="right">
+<a href="#detection-rules">⬅ Back to Detection Rules</a> •
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
+
 ---
 
-### Rule 4 — Outbound Traffic to High-Risk Countries
+### DET-004 — Outbound Traffic to High-Risk Countries
 
 **Detection logic:** Flags outbound connections from the lab network to public IPs geolocated in a configurable list of high-risk countries (e.g., countries associated with known APT activity against Israeli critical infrastructure — Iran, Russia, North Korea, Syria, China). Uses Splunk's built-in `iplocation` command (bundled MaxMind GeoLite2 database — no add-on install required) against pfSense's `filterlog` firewall events, then enriches each flagged IP with live reputation data via a custom VirusTotal scripted lookup.
 
@@ -315,9 +330,14 @@ index=pfsense "filterlog"
 
 **What I'd tune in production:** replace the script's in-memory cache with a persistent lookup table (KV Store) so previously-checked IPs aren't re-queried across separate runs; add AbuseIPDB as a second reputation source; move to a paid VirusTotal tier or batched API usage if match volume grows past the free tier's limits; build a maintained allowlist for known-legitimate infrastructure (root DNS servers, major cloud/CDN ASNs); correlate with destination port/protocol, since outbound HTTPS to a flagged country is far less notable than traffic on an unusual port; track ASN alongside country, since ASN ownership tends to be more stable than country-level geolocation.
 
+<p align="right">
+<a href="#detection-rules">⬅ Back to Detection Rules</a> •
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
+
 ---
 
-### Rule 5 — Port Scan Detection (High Port-Touch Volume)
+### DET-005 — Port Scan Detection (High Port-Touch Volume)
 
 **Detection logic:** Flags a single source IP touching an unusually high number of distinct destination ports on the same destination host within a 1-minute window — the classic signature of a port scan. Deliberately does **not** filter on `action="block"` — the rule detects the pattern of many-ports-from-one-source regardless of whether pfSense's firewall rules pass or block the traffic, since a permissive rule (or a scan against an open service range) would otherwise hide a real scan from a block-only detection.
 
@@ -347,9 +367,14 @@ nmap -sS -p 1-1000 10.0.20.1
 
 **What I'd tune in production:** raise the threshold significantly (the lab's `>= 10` is deliberately sensitive for validation; production typically uses 15–50+ depending on baseline); allowlist known vulnerability scanner infrastructure (Nessus/OpenVAS/Qualys will trigger this identically to a malicious scan); correlate with whether scanned ports actually returned open/closed/filtered, since a scan against a mostly-filtered host is a stronger anomaly than one against a host with many legitimately open services; add a companion horizontal-scan detection (many hosts, few ports each) since this rule only catches vertical scans.
 
+<p align="right">
+<a href="#detection-rules">⬅ Back to Detection Rules</a> •
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
+
 ---
 
-### Rule 6 — Brute Force: Local Administrator Account (SMB)
+### DET-006 — Brute Force — Local Administrator Account (SMB)
 
 **Detection logic:** Detects sustained password-guessing attempts against the **built-in local `administrator` account** via SMB, aggregating failed logon events (Event 4625) by source IP and target user, with a failure-code breakdown to confirm the pattern is genuine password guessing rather than username enumeration.
 
@@ -388,6 +413,189 @@ nxc smb 10.0.30.100 -u administrator -p /usr/share/wordlists/rockyou.txt --ignor
 **What I'd tune in production:** exclude the built-in Administrator account from being SMB-reachable at all where possible (LAPS + disabled remote use of the local admin account is the actual fix, not just detecting attempts against it); correlate with `LogonType` and `signing`/`SMBv1` status to also surface the NTLM-relay exposure in the same alert; resolve the `Authentication.src` mapping gap so this rule (and future ones) can run on `tstats` instead of raw search.
 
 <p align="right">
+<a href="#detection-rules">⬅ Back to Detection Rules</a> •
+<a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
+</p>
+
+---
+
+### DET-007 — Suspicious Encoded PowerShell Execution
+
+**MITRE ATT&CK**
+
+- **T1059.001 – PowerShell**
+- **TA0002 – Execution**
+
+**Detection logic:**
+
+Detects suspicious PowerShell execution by correlating multiple high-risk command-line indicators within the same process creation event.
+
+Rather than relying on a single keyword match, this detection evaluates multiple behavioral indicators within each PowerShell execution and assigns a weighted risk score.
+
+The rule generates a detection only when multiple suspicious behaviors are observed together, significantly reducing false positives while maintaining strong detection coverage against common attacker tradecraft.
+
+Examples of suspicious indicators include:
+
+- EncodedCommand (`-enc`, `-EncodedCommand`)
+- ExecutionPolicy Bypass
+- NoProfile
+- Hidden Window
+- Invoke-Expression
+- Invoke-WebRequest / DownloadString / WebClient
+- Base64 decoding via FromBase64String()
+
+Each indicator contributes to a cumulative risk score.
+
+The detection returns a result only when at least two independent behavioral indicators are observed within the same PowerShell execution.
+
+---
+
+## SPL Detection
+
+```spl
+index=sysmon host="WIN-CL01" EventCode=1
+| eval process_image=lower(coalesce(Image, ProcessName, New_Process_Name))
+| eval cmd=lower(coalesce(CommandLine, Process_Command_Line, _raw))
+| where like(process_image,"%\\powershell.exe")
+    OR like(process_image,"%\\pwsh.exe")
+| eval encoded=if(match(cmd,"(?i)(^|\\s)-(enc|encodedcommand)(\\s|:|$)"),1,0)
+| eval execution_policy_bypass=if(match(cmd,"(?i)(executionpolicy\\s+bypass|-ep\\s+bypass)"),1,0)
+| eval no_profile=if(match(cmd,"(?i)(-noprofile|-nop)(\\s|$)"),1,0)
+| eval hidden_window=if(match(cmd,"(?i)(windowstyle\\s+hidden|-w\\s+hidden)"),1,0)
+| eval dynamic_execution=if(match(cmd,"(?i)(invoke-expression|\\biex\\b)"),1,0)
+| eval download_activity=if(match(cmd,"(?i)(invoke-webrequest|\\biwr\\b|downloadstring|downloadfile|webclient)"),1,0)
+| eval base64_decode=if(match(cmd,"(?i)frombase64string"),1,0)
+| eval indicator_count=
+encoded
++execution_policy_bypass
++no_profile
++hidden_window
++dynamic_execution
++download_activity
++base64_decode
+| eval risk_score=
+(encoded*40)
++(execution_policy_bypass*20)
++(no_profile*10)
++(hidden_window*20)
++(dynamic_execution*25)
++(download_activity*30)
++(base64_decode*20)
+| where indicator_count>=2
+| eval severity=case(
+risk_score>=80,"CRITICAL",
+risk_score>=60,"HIGH",
+risk_score>=40,"MEDIUM",
+true(),"LOW")
+| eval indicators=mvappend(
+if(encoded=1,"EncodedCommand",null()),
+if(execution_policy_bypass=1,"ExecutionPolicy Bypass",null()),
+if(no_profile=1,"NoProfile",null()),
+if(hidden_window=1,"Hidden Window",null()),
+if(dynamic_execution=1,"Dynamic Execution",null()),
+if(download_activity=1,"Download Activity",null()),
+if(base64_decode=1,"Base64 Decode",null())
+)
+| table _time host User ParentImage Image CommandLine indicators indicator_count risk_score severity ProcessGuid
+| sort -_time
+```
+
+---
+
+## Attack Simulation
+
+The attack was simulated by executing a Base64-encoded PowerShell command using the following parameters:
+
+- `-EncodedCommand`
+- `-ExecutionPolicy Bypass`
+- `-NoProfile`
+
+This generated genuine Sysmon Event ID 1 Process Creation telemetry, which successfully matched the detection logic.
+
+![DET-007 Attack Simulation](screenshots/det-007-01-attack-simulation.png)
+
+---
+
+## Detection Result
+
+The detection successfully identified every simulated PowerShell execution and calculated the associated behavioral indicators, cumulative risk score, and severity level.
+
+Each event includes the original command line together with the indicators responsible for the detection decision.
+
+For each PowerShell execution it calculated:
+
+- Suspicious indicators
+- Indicator count
+- Risk score
+- Severity
+
+The resulting telemetry clearly shows the malicious command line together with the calculated detection metadata.
+
+![DET-007 Detection Result](screenshots/det-007-02-detection-results.png)
+
+---
+
+## False Positives
+
+Potential false positives include:
+
+- Enterprise software deployment tools
+- Administrative PowerShell automation
+- Configuration-management platforms
+- Legitimate automation scripts using EncodedCommand
+
+The rule intentionally requires multiple indicators before alerting in order to reduce benign administrative activity.
+
+---
+
+## Production Tuning
+
+Recommended improvements for enterprise environments:
+
+- Convert the detection into a scheduled Splunk alert.
+- Exclude approved automation accounts and service accounts.
+- Exclude Microsoft SCCM, Intune, and other trusted management hosts.
+- Maintain an allowlist for approved administrative scripts.
+- Increase the risk score for download-related activity (Invoke-WebRequest, DownloadString, WebClient).
+- Correlate with PowerShell Event ID 4104 (Script Block Logging) when available.
+- Correlate with outbound network connections (Sysmon Event ID 3) to identify payload downloads or C2 activity.
+- Correlate with child process creation (Sysmon Event ID 1) to detect PowerShell spawning additional processes.
+- Suppress duplicate alerts using throttling to reduce alert fatigue.
+- Continuously review and tune the detection based on false-positive analysis.
+- Correlate with user logon events (4624 / 4625) to provide additional execution context.
+- Build a baseline of normal PowerShell usage to further reduce false positives.
+
+---
+
+## Investigation Guide
+
+When this alert triggers, validate:
+
+- Who executed PowerShell?
+- What parent process launched PowerShell?
+- Was the execution interactive or remote?
+- Was Base64 encoding used?
+- Did the process establish outbound network connections?
+- Was additional payload downloaded?
+- Does the activity match expected administrator behavior?
+- Is the executed command consistent with the user's normal administrative activity?
+
+---
+
+**Result**
+
+✅ End-to-end validated in the home SOC lab.
+
+- Attack simulation completed
+- Sysmon telemetry collected successfully
+- Detection matched the simulated activity
+- Splunk alert triggered successfully
+- Detection validated and fully documented
+
+
+
+<p align="right">
+<a href="#detection-rules">⬅ Back to Detection Rules</a> •
 <a href="#soc--purple-team-home-lab">⬆ Back to Top</a>
 </p>
 
