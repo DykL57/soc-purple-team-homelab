@@ -107,17 +107,20 @@ Zone 5, which hosts Kali Linux, was initially isolated with no route to the othe
 
 ## Detection Rules
 
-Each rule below follows the same format: detection logic, SPL, how it was triggered, and proof it fired.
+**Progress:** **7 / 20 Production Detection Rules Completed**
 
-| # | Rule | MITRE ATT&CK | Category | Search Method | Status |
-|---|---|---|---|---|---|
-| 1 | Brute Force Detection (Authentication) | T1110 | Credential Access | `tstats` (CIM Authentication) | ✅ Validated |
-| 2 | Successful Login After Multiple Failures | T1078 | Credential Access / Initial Access | `tstats` (CIM Authentication) | ✅ Validated |
-| 3 | Lateral Movement via Remote Service Creation (PsExec) | T1021.002 / T1569.002 | Lateral Movement | Raw search (`rex` extraction) | ✅ Validated |
-| 4 | Outbound Traffic to High-Risk Countries | T1071 / TA0011 | Network — Anomalous Outbound Traffic | Raw search + `iplocation` + VirusTotal lookup | ✅ Validated |
-| 5 | Port Scan Detection (High Port-Touch Volume) | T1046 | Network — Reconnaissance | Raw search (`rex` + `stats`) | ✅ Validated |
-| 6 | Brute Force — Local Administrator Account (SMB) | T1110.001 | Credential Access | Raw search (`rex` extraction) | ✅ Validated |
-| 7–50 | See [detection-rules/](detection-rules/) | — | — | — | ⏳ Planned |
+Each detection rule follows a standardized methodology including threat scenario, detection logic, SPL, attack simulation, validation, MITRE ATT&CK mapping, investigation guidance, and production readiness testing.
+
+| ID | Rule | MITRE ATT&CK | Category | Search Method | Status |
+|----|------|--------------|----------|---------------|--------|
+| DET-001 | Brute Force Detection (Authentication) | T1110 | Credential Access | `tstats` (CIM Authentication) | ✅ Validated |
+| DET-002 | Successful Login After Multiple Failures | T1078 | Credential Access / Initial Access | `tstats` (CIM Authentication) | ✅ Validated |
+| DET-003 | Lateral Movement via Remote Service Creation (PsExec) | T1021.002 / T1569.002 | Lateral Movement | Raw search (`rex` extraction) | ✅ Validated |
+| DET-004 | Outbound Traffic to High-Risk Countries | T1071 / TA0011 | Network — Anomalous Outbound Traffic | Raw search + `iplocation` + VirusTotal lookup | ✅ Validated |
+| DET-005 | Port Scan Detection (High Port-Touch Volume) | T1046 | Network — Reconnaissance | Raw search (`rex` + `stats`) | ✅ Validated |
+| DET-006 | Brute Force — Local Administrator Account (SMB) | T1110.001 | Credential Access | Raw search (`rex` extraction) | ✅ Validated |
+| DET-007 | Suspicious Encoded PowerShell Execution | T1059.001 | Execution | Sysmon + Security + PowerShell | ✅ Production Ready |
+| DET-008 – DET-020 | Planned Detection Rules | Various | Multiple ATT&CK Tactics | Detection Engineering | ⏳ In Progress |
 
 ### Rule 1 — Brute Force Detection (Authentication)
 
