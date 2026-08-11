@@ -16,9 +16,7 @@ Unexpected outbound traffic to infrastructure associated with a monitored region
 
 ## MITRE ATT&CK
 
-- T1071 — Application Layer Protocol
-
-This is a broad contextual mapping; the search does not prove command-and-control behavior.
+**N/A / Context-dependent.** The available evidence identifies geolocation-based network context but does not demonstrate application-layer command-and-control behavior.
 
 ## Detection Logic
 
