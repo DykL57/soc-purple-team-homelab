@@ -2,7 +2,7 @@
 
 **TL;DR:** Reorganized Windows event log indexing across 3 forwarders (2 workstations + 1 DC) into a role-based index scheme (`windows` / `win_dc` / `sysmon`). Verification searches showed events still landing in the wrong indexes despite correct app-level config — traced to a legacy `inputs.conf` in `etc/system/local/` silently overriding the new app on every host, due to Splunk's config file precedence rules.
 
-**[Full write-up →](./docs/splunk_index_precedence_EN.md)**
+**[Repository overview →](../README.md)**
 
 ### What happened
 - New `lab_windows` app created to route `WinEventLog` and Sysmon inputs into role-based indexes (`windows` for endpoints, `win_dc` for the Domain Controller, `sysmon` for Sysmon telemetry) instead of everything defaulting to `main`.
