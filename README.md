@@ -61,6 +61,22 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 | Sensor / Attack | `10.0.50.0/24` | KALI-OPS01 | Controlled adversary simulation |
 | Gateway | Multiple interfaces | PFSENSE01 | Deny-by-default inter-zone routing and WAN access |
 
+## Lab Systems
+
+| System | Platform | Confirmed role / services | Zone |
+|---|---|---|---|
+| PFSENSE01 | pfSense CE 2.8.1 | Routing, firewalling, DHCP, and Suricata | Gateway |
+| DC01 | Windows Server 2022 | Active Directory Domain Services and DNS | Servers |
+| SPLUNK01 | Rocky Linux | Splunk Enterprise | Servers |
+| WIN-CL01 | Windows 10 | Domain-joined detection target | Clients |
+| WIN-CL02 | Windows 10 | Domain-joined detection target | Clients |
+| KALI-OPS01 | Kali Linux | Controlled attack simulation | Sensor / Attack |
+| WIN-REDTEAM01 | Not documented | Not documented | Not documented |
+| linux-srv01 | Ubuntu Server | Not documented | Not documented |
+| web-app01 | Ubuntu Server | Apache and MariaDB | Not documented |
+
+IP addresses, zone placement, services, and telemetry paths are intentionally omitted where they are not confirmed by the available documentation.
+
 ## Telemetry & Logging Pipeline
 
 ```text
