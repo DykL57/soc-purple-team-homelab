@@ -54,28 +54,28 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 
 ## Network / Security Zones
 
-| Zone | Subnet | Systems | Purpose |
-|---|---|---|---|
-| Servers | `10.0.20.0/24` | DC01, SPLUNK01 | Identity, DNS, and SIEM services |
-| Clients | `10.0.30.0/24` | WIN-CL01, WIN-CL02 | Domain-joined endpoints |
-| Sensor / Attack | `10.0.50.0/24` | KALI-OPS01 | Controlled adversary simulation |
-| Gateway | Multiple interfaces | PFSENSE01 | Deny-by-default inter-zone routing and WAN access |
+| VMware network | Subnet / gateway | pfSense connection | Connected systems | Purpose |
+|---|---|---|---|---|
+| VMnet0 | WAN / upstream | pfSense WAN | pfSense | Upstream connectivity |
+| VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01 | Servers, infrastructure, and SIEM |
+| VMnet4 | `10.0.30.0/24` | pfSense | WIN-CL01, WIN-CL02 | Windows client network |
+| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | Kali Linux, web-app01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01 (Planned) | RED_NET and security testing |
 
 ## Lab Systems
 
-| System | Platform | Confirmed role / services | Zone |
-|---|---|---|---|
-| PFSENSE01 | pfSense CE 2.8.1 | Routing, firewalling, DHCP, and Suricata | Gateway |
-| DC01 | Windows Server 2022 | Active Directory Domain Services and DNS | Servers |
-| SPLUNK01 | Rocky Linux | Splunk Enterprise | Servers |
-| WIN-CL01 | Windows 10 | Domain-joined detection target | Clients |
-| WIN-CL02 | Windows 10 | Domain-joined detection target | Clients |
-| KALI-OPS01 | Kali Linux | Controlled attack simulation | Sensor / Attack |
-| WIN-REDTEAM01 | Not documented | Not documented | Not documented |
-| linux-srv01 | Ubuntu Server | Not documented | Not documented |
-| web-app01 | Ubuntu Server | Apache and MariaDB | Not documented |
-
-IP addresses, zone placement, services, and telemetry paths are intentionally omitted where they are not confirmed by the available documentation.
+| System | Platform | Role / Services | Network | Address | Status |
+|---|---|---|---|---|---|
+| pfSense | pfSense CE 2.8.1 / FreeBSD | Firewall, routing, segmentation, DHCP, and Suricata | VMnet0, VMnet3, VMnet4, VMnet6 | Multiple interfaces | Active |
+| Rocky Linux 64-bit (Splunk) | Rocky Linux | Splunk Enterprise Server / SIEM | VMnet3 | `10.0.20.100` | Active |
+| linux-srv01 | Ubuntu Server | SSH, Apache, Syslog, Splunk Universal Forwarder | VMnet3 | `10.0.20.x` | Active |
+| DC01 | Windows Server 2022 | Active Directory Domain Services and DNS | VMnet3 | TBD (`10.0.20.0/24`) | Active |
+| WIN-CL01 | Windows 10 | Domain-joined endpoint / detection target | VMnet4 | TBD (`10.0.30.0/24`) | Active |
+| WIN-CL02 | Windows 10 | Domain-joined endpoint / detection target | VMnet4 | TBD (`10.0.30.0/24`) | Active |
+| Kali Linux | Kali Linux 2026.2 | Primary attack workstation | VMnet6 | `10.0.50.60/24` | Active |
+| FILE-SRV01 | Windows Server (version TBD) | File server / lab target | VMnet6 | DHCP / TBD | Active |
+| web-app01 | Ubuntu Server | Apache, MariaDB, web application target | VMnet6 | DHCP / TBD | Active |
+| WIN-REDTEAM01 | Windows 11 Pro | Windows Red Team workstation | VMnet6 | DHCP initially | Installing |
+| C2-SLIVER01 | Linux Server | Sliver C2 | VMnet6 | TBD | Planned |
 
 ## Telemetry & Logging Pipeline
 
@@ -86,12 +86,14 @@ Windows Security/System logs + Sysmon
                 │
                 ├──────────────► Splunk Enterprise
                 │
+linux-srv01 Syslog + Splunk Universal Forwarder ──► Splunk Enterprise
+
 pfSense firewall/system/DHCP ──► UDP 5514 syslog
 
-Suricata on pfSense ──► Splunk ingestion not yet implemented
+Suricata on pfSense ──► Splunk ingestion in progress / incomplete
 ```
 
-Windows telemetry is stored in dedicated Splunk indexes. pfSense forwards firewall, system, and DHCP events for network visibility. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline.
+Windows telemetry is stored in dedicated Splunk indexes. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. pfSense forwards firewall, system, and DHCP events for network visibility. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline.
 
 ## Detection Engineering
 
