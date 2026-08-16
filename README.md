@@ -27,12 +27,12 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 - Two domain-joined Windows endpoints with Sysmon and Splunk Universal Forwarder
 - pfSense routing, firewall policy, DHCP, and Suricata IDS/IPS across segmented zones
 - Splunk Enterprise pipelines for Windows telemetry and pfSense syslog
-- Seven documented Splunk detections with attack or traffic-based validation evidence
+- Eight documented Splunk detections with attack or traffic-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
 
 ## Key Project Highlights
 
-- Validated seven detections spanning authentication, lateral movement, reconnaissance, network activity, and PowerShell execution.
+- Validated eight detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, and user discovery.
 - Identified 759 distinct destination ports touched in one minute during controlled vertical-scan validation.
 - Captured 2,651 failed SMB logons against a local Administrator account and documented the Windows RID 500 lockout limitation.
 - Investigated stale GeoLite2 results, confirmed the observed hits as false positives, and added VirusTotal enrichment to the existing search workflow.
@@ -106,6 +106,7 @@ Windows telemetry is stored in dedicated Splunk indexes. linux-srv01 provides Sy
 | [DET-005](detections/splunk/DET-005-vertical-port-scan.md) | Vertical port scan | pfSense `filterlog` | T1046 | Validated |
 | [DET-006](detections/splunk/DET-006-local-admin-smb-brute-force.md) | Local Administrator SMB brute force | Windows Security 4625 | T1110.001 | Validated |
 | [DET-007](detections/splunk/DET-007-encoded-powershell.md) | Encoded PowerShell | Sysmon 1 | T1059.001 | Validated |
+| [DET-008](detections/splunk/DET-008-whoami-user-discovery.md) | Windows Whoami User Discovery | Sysmon 1 | T1033 | Validated |
 
 See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 
@@ -121,7 +122,7 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 .
 ├── README.md
 ├── detections/
-│   └── splunk/                  # Catalog and DET-001 through DET-007
+│   └── splunk/                  # Catalog and DET-001 through DET-008
 ├── docs/
 │   ├── lab-engineering-notes.md
 │   ├── splunk_index_precedence_EN.md
@@ -131,7 +132,7 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 
 ## Current Status / Known Limitations
 
-- Seven detections are documented; none are claimed to be production-ready.
+- Eight detections are documented; none are claimed to be production-ready.
 - DET-004 remains Experimental because geo-IP is a weak signal and both validation hits were confirmed as false positives.
 - DET-003 remains a raw search because Windows Event 7045 lacks the required CIM Change field extractions in the current configuration.
 - DET-006 remains a raw search because the CIM `Authentication.src` override is unresolved.
