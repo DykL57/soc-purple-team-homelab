@@ -17,7 +17,7 @@ This repository documents a segmented, enterprise-style home lab used to practic
 
 ## Architecture
 
-![SOC and Purple Team home lab architecture](screenshots/Network-Architecture-Diagram_2.png)
+![SOC and Purple Team home lab architecture](screenshots/Network-Architecture-Diagram_4.png)
 
 pfSense is the only routing path between isolated VMware host-only networks. Its WAN receives a private RFC1918 address from the upstream router; the upstream router, not pfSense's WAN address, provides Internet-facing NAT.
 
