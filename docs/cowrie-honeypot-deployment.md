@@ -2,7 +2,7 @@
 
 ## Overview
 
-HONEYPOT01 runs Cowrie as a deception service for controlled SSH/Telnet interaction, credential capture, and attacker command/session telemetry. The system is isolated in the DECEPTION security zone and forwards newline-delimited Cowrie JSON records to Splunk Enterprise.
+LINUX-HONEYPOT01 runs Cowrie as a deception service for controlled SSH/Telnet interaction, credential capture, and attacker command/session telemetry. The system is isolated in the DECEPTION security zone and forwards newline-delimited Cowrie JSON records to Splunk Enterprise.
 
 This document describes the final working deployment. Temporary troubleshooting monitors are documented separately in [Troubleshooting Cowrie Splunk Ingestion](troubleshooting-cowrie-splunk-ingestion.md).
 
@@ -14,7 +14,7 @@ KALI-OPS01
     |
     | SSH TCP/2222
     v
-HONEYPOT01 / Cowrie
+LINUX-HONEYPOT01 / Cowrie
 10.0.60.10
     |
     | /home/cowrie/my-honeypot/var/log/cowrie/cowrie.json
@@ -33,8 +33,8 @@ sourcetype=cowrie:json
 
 | Setting | Final value |
 |---|---|
-| System | HONEYPOT01 |
-| Hostname | `honeypot01` |
+| System | LINUX-HONEYPOT01 |
+| Hostname | `LINUX-HONEYPOT01` |
 | Operating system | Ubuntu Server 24.04 |
 | Address | `10.0.60.10/24` |
 | Gateway | `10.0.60.1` |
@@ -50,7 +50,7 @@ sourcetype=cowrie:json
 
 Cowrie is installed under `/home/cowrie/my-honeypot` and writes JSON session telemetry to `var/log/cowrie/cowrie.json` within that directory. The operational service accepted controlled SSH connections from KALI-OPS01 and recorded connection, client, authentication, command, and session-close activity.
 
-The Splunk Universal Forwarder is installed on HONEYPOT01 and runs as `splunkfwd`. Its local input configuration is stored at:
+The Splunk Universal Forwarder is installed on LINUX-HONEYPOT01 and runs as `splunkfwd`. Its local input configuration is stored at:
 
 ```text
 /opt/splunkforwarder/etc/system/local/inputs.conf
@@ -72,8 +72,8 @@ Only the documented flows required for the validated path are represented here:
 
 | Source | Destination | Service | Purpose |
 |---|---|---|---|
-| REDTEAM | HONEYPOT01 (`10.0.60.10`) | TCP/2222 | Cowrie SSH interaction; validated from KALI-OPS01 (`10.0.50.60`) |
-| HONEYPOT01 (`10.0.60.10`) | Splunk Enterprise (`10.0.20.100`) | TCP/9997 | Universal Forwarder event transport |
+| REDTEAM | LINUX-HONEYPOT01 (`10.0.60.10`) | TCP/2222 | Cowrie SSH interaction; validated from KALI-OPS01 (`10.0.50.60`) |
+| LINUX-HONEYPOT01 (`10.0.60.10`) | Splunk Enterprise (`10.0.20.100`) | TCP/9997 | Universal Forwarder event transport |
 
 pfSense logs confirmed PASS for the forwarding traffic. Connectivity to the Splunk receiver was also validated with:
 
@@ -147,11 +147,11 @@ Additional queries are available in [Cowrie Example Splunk Searches](../splunk/c
 
 ## Time Configuration
 
-HONEYPOT01 is configured for `Asia/Jerusalem`, with NTP active and the system clock synchronized. Cowrie records may still contain UTC/Z timestamps; this is expected.
+LINUX-HONEYPOT01 is configured for `Asia/Jerusalem`, with NTP active and the system clock synchronized. Cowrie records may still contain UTC/Z timestamps; this is expected.
 
 ## Security Considerations
 
-- Keep HONEYPOT01 in the dedicated DECEPTION zone and restrict traffic to the documented test and forwarding flows.
+- Keep LINUX-HONEYPOT01 in the dedicated DECEPTION zone and restrict traffic to the documented test and forwarding flows.
 - Treat captured usernames, passwords, commands, and session data as sensitive security telemetry.
 - Grant the `splunkfwd` account only the traversal and read access required for the Cowrie log path. Broad permissions such as `chmod 777` are not required.
 - Keep temporary diagnostic monitors disabled or removed after troubleshooting to prevent duplicate or incorrectly classified ingestion.

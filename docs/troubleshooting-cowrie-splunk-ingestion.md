@@ -9,7 +9,7 @@ Cowrie accepted SSH sessions and wrote valid JSON, but the expected data did not
 ```text
 Cowrie
   -> /home/cowrie/my-honeypot/var/log/cowrie/cowrie.json
-  -> Splunk Universal Forwarder on HONEYPOT01
+  -> Splunk Universal Forwarder on LINUX-HONEYPOT01
   -> TCP/9997 through pfSense
   -> Splunk Enterprise 10.0.20.100
   -> index=honeypot, sourcetype=cowrie:json
@@ -63,7 +63,7 @@ The command returned JSON successfully, proving that the service account could t
 
 ### 4. Confirm transport through pfSense
 
-Connectivity from HONEYPOT01 to the Splunk receiver was tested with:
+Connectivity from LINUX-HONEYPOT01 to the Splunk receiver was tested with:
 
 ```bash
 nc -vz 10.0.20.100 9997
@@ -73,7 +73,7 @@ The connection succeeded. pfSense logs showed PASS, the Universal Forwarder repo
 
 ### 5. Confirm Splunk and indexer visibility
 
-The `honeypot` index existed, and `_internal` events from `host=honeypot01` reached Splunk. This demonstrated that HONEYPOT01 was known to Splunk and that the forwarding path was generally functional.
+The `honeypot` index existed, and `_internal` events from `host=honeypot01` reached Splunk. This demonstrated that LINUX-HONEYPOT01 was known to Splunk and that the forwarding path was generally functional.
 
 ### 6. Run an A/B filesystem-path test
 
@@ -104,7 +104,7 @@ These monitors were later disabled or removed. They are not part of the final pr
 
 - **Network or firewall failure:** plausible initially, but disproved by successful `nc`, pfSense PASS logs, an active forwarder connection, and a listening receiver.
 - **Missing index:** disproved because `index=honeypot` existed.
-- **Universal Forwarder entirely broken:** disproved by `_internal` events from HONEYPOT01 and the successful A/B file test.
+- **Universal Forwarder entirely broken:** disproved by `_internal` events from LINUX-HONEYPOT01 and the successful A/B file test.
 - **Cowrie service failure:** disproved by successful SSH interaction and valid session telemetry in `cowrie.json`.
 - **Permissions as the only root cause:** ACLs were required, but correct access alone did not fix the single-large-event parsing problem.
 
@@ -156,7 +156,7 @@ index=honeypot host=honeypot01 earliest=-5m
 
 The search returned 23 individual Cowrie events. Event types included connection, client, authentication, command, log-close, and session-close records. Fields including `src_ip`, `src_port`, `dst_ip`, `dst_port`, `username`, `password`, `input`, `message`, `eventid`, `session`, and `sensor` were extracted successfully.
 
-HONEYPOT01 was also corrected to `Asia/Jerusalem`, with NTP active and the clock synchronized. UTC/Z timestamps in Cowrie records remain expected.
+LINUX-HONEYPOT01 was also corrected to `Asia/Jerusalem`, with NTP active and the clock synchronized. UTC/Z timestamps in Cowrie records remain expected.
 
 ## Lessons Learned
 

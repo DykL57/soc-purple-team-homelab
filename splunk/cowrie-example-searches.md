@@ -10,7 +10,7 @@ index=honeypot host=honeypot01
 | sort - count
 ```
 
-Use this search to review the distribution of Cowrie event types from HONEYPOT01.
+Use this search to review the distribution of Cowrie event types from LINUX-HONEYPOT01.
 
 ## Session Timeline
 
