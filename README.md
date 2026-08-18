@@ -36,6 +36,7 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 - Identified 759 distinct destination ports touched in one minute during controlled vertical-scan validation.
 - Captured 2,651 failed SMB logons against a local Administrator account and documented the Windows RID 500 lockout limitation.
 - Investigated stale GeoLite2 results, confirmed the observed hits as false positives, and added VirusTotal enrichment to the existing search workflow.
+- Deployed Cowrie in a dedicated DECEPTION zone and resolved a multi-layer Splunk ingestion issue involving filesystem access, temporary monitor configurations, and newline-delimited JSON event breaking; final validation returned 23 individual events with extracted fields.
 - Preserved root-cause findings for CIM mapping, Windows log placement, DHCP configuration, timestamps, and WAN stability in [Lab Engineering Notes](docs/lab-engineering-notes.md).
 
 ## Technology Stack
@@ -49,33 +50,63 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 | Splunk CIM Add-on | Authentication data-model normalization |
 | pfSense CE 2.8.1 | Routing, firewalling, DHCP, and syslog |
 | Suricata | IDS/IPS installed and integrated with pfSense; Splunk ingestion pending |
+| Cowrie | SSH/Telnet deception, credential capture, and attacker command/session telemetry |
 | Kali Linux | Controlled attack-simulation platform |
 | VMware Workstation | Virtualization and network segmentation |
 
 ## Network / Security Zones
 
-| VMware network | Subnet / gateway | pfSense connection | Connected systems | Purpose |
+| Network / zone | Subnet / gateway | pfSense connection | Connected systems | Purpose |
 |---|---|---|---|---|
 | VMnet0 | WAN / upstream | pfSense WAN | pfSense | Upstream connectivity |
 | VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01 | Servers, infrastructure, and SIEM |
 | VMnet4 | `10.0.30.0/24` | pfSense | WIN-CL01, WIN-CL02 | Windows client network |
-| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | Kali Linux, web-app01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01 (Planned) | RED_NET and security testing |
+| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01 (Planned) | RED_NET and security testing |
+| VMnet7 | `10.0.60.0/24`; gateway `10.0.60.1` | pfSense DECEPTION | LINUX-HONEYPOT01 | DECEPTION zone for isolated honeypot services |
 
 ## Lab Systems
 
-| System | Platform | Role / Services | Network | Address | Status |
-|---|---|---|---|---|---|
-| pfSense | pfSense CE 2.8.1 / FreeBSD | Firewall, routing, segmentation, DHCP, and Suricata | VMnet0, VMnet3, VMnet4, VMnet6 | Multiple interfaces | Active |
-| Rocky Linux 64-bit (Splunk) | Rocky Linux | Splunk Enterprise Server / SIEM | VMnet3 | `10.0.20.100` | Active |
-| linux-srv01 | Ubuntu Server | SSH, Apache, Syslog, Splunk Universal Forwarder | VMnet3 | `10.0.20.x` | Active |
-| DC01 | Windows Server 2022 | Active Directory Domain Services and DNS | VMnet3 | TBD (`10.0.20.0/24`) | Active |
-| WIN-CL01 | Windows 10 | Domain-joined endpoint / detection target | VMnet4 | TBD (`10.0.30.0/24`) | Active |
-| WIN-CL02 | Windows 10 | Domain-joined endpoint / detection target | VMnet4 | TBD (`10.0.30.0/24`) | Active |
-| Kali Linux | Kali Linux 2026.2 | Primary attack workstation | VMnet6 | `10.0.50.60/24` | Active |
-| FILE-SRV01 | Windows Server (version TBD) | File server / lab target | VMnet6 | DHCP / TBD | Active |
-| web-app01 | Ubuntu Server | Apache, MariaDB, web application target | VMnet6 | DHCP / TBD | Active |
-| WIN-REDTEAM01 | Windows 11 Pro | Windows Red Team workstation | VMnet6 | DHCP initially | Installing |
-| C2-SLIVER01 | Linux Server | Sliver C2 | VMnet6 | TBD | Planned |
+| # | Machine / VM | Operating System | Primary Role | VMware Network | Network / Subnet | Known IP | Zone / Purpose | Status |
+|---|---|---|---|---|---|---|---|---|
+| 1 | pfSense | pfSense / FreeBSD | Firewall, router, segmentation, DHCP | VMnet0, VMnet3, VMnet4, VMnet6, VMnet7 | WAN + `10.0.20.0/24` + `10.0.30.0/24` + `10.0.50.0/24` + `10.0.60.0/24` | Multiple interfaces | Core network / firewall | Active |
+| 2 | Rocky Linux 64-bit | Rocky Linux | Splunk Enterprise Server / SIEM | VMnet3 | `10.0.20.0/24` | `10.0.20.100` | SIEM / management | Active |
+| 3 | Ubuntu Server / linux-srv01 | Ubuntu Server | Linux server, SSH, Apache, Syslog, Splunk UF | VMnet3 | `10.0.20.0/24` | `10.0.20.41` | Server / monitoring | Active |
+| 4 | DC01 | Windows Server | Active Directory / Domain Controller | VMnet3 | `10.0.20.0/24` | `10.0.20.10` | Infrastructure / AD | Active |
+| 5 | WIN-CL01 | Windows | Domain / endpoint client | VMnet4 | `10.0.30.0/24` | `10.0.30.100` | Windows client zone | Active |
+| 6 | WIN-CL02 | Windows | Domain / endpoint client | VMnet4 | `10.0.30.0/24` | `10.0.30.101` | Windows client zone | Active |
+| 7 | KALI-OPS01 | Kali Linux 2026.2 | Offensive security / attack workstation | VMnet6 | `10.0.50.0/24` | `10.0.50.60` | Red Team | Active |
+| 8 | FILE-SRV01 | Windows Server | File server / lab target | VMnet6 | `10.0.50.0/24` | `10.0.50.105` | Red / target services | Active |
+| 9 | WEB-APP01 | Ubuntu Server | Apache + MariaDB / web application target | VMnet6 | `10.0.50.0/24` | `10.0.50.102` | Red / target services | Active |
+| 10 | WIN-REDTEAM01 | Windows 11 Pro | Windows Red Team workstation | VMnet6 | `10.0.50.0/24` | `10.0.50.50` | Red Team | Active |
+| 11 | LINUX-HONEYPOT01 | Ubuntu Server | Honeypot / deception host / attack telemetry collection | VMnet7 | `10.0.60.0/24` | `10.0.60.10` | Honeypot / Deception Zone | Active |
+| 12 | C2-SLIVER01 | Linux Server | Sliver C2 server / Red Team command-and-control infrastructure | VMnet6 | `10.0.50.0/24` | `10.0.50.x` planned | Red Team / C2 | Planned |
+
+### Network Segmentation Summary
+
+```text
+VMnet3 / 10.0.20.0/24
+└── Infrastructure / Servers / SIEM
+    ├── Splunk Enterprise
+    ├── DC01
+    └── linux-srv01
+
+VMnet4 / 10.0.30.0/24
+└── Windows Clients
+    ├── WIN-CL01
+    └── WIN-CL02
+
+VMnet6 / 10.0.50.0/24
+└── Red Team / Targets / C2
+    ├── KALI-OPS01
+    ├── WIN-REDTEAM01
+    ├── FILE-SRV01
+    ├── WEB-APP01
+    └── C2-SLIVER01
+
+VMnet7 / 10.0.60.0/24
+└── Honeypot / Deception
+    └── LINUX-HONEYPOT01
+```
 
 ## Telemetry & Logging Pipeline
 
@@ -91,9 +122,15 @@ linux-srv01 Syslog + Splunk Universal Forwarder ──► Splunk Enterprise
 pfSense firewall/system/DHCP ──► UDP 5514 syslog
 
 Suricata on pfSense ──► Splunk ingestion in progress / incomplete
+
+KALI-OPS01 (`10.0.50.60`)
+    └─ SSH TCP/2222 ─► LINUX-HONEYPOT01 / Cowrie (`10.0.60.10`)
+                           └─ `cowrie.json` ─► Splunk Universal Forwarder
+                                                  └─ TCP/9997 ─► Splunk Enterprise (`10.0.20.100`)
+                                                                     `index=honeypot`, `sourcetype=cowrie:json`
 ```
 
-Windows telemetry is stored in dedicated Splunk indexes. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. pfSense forwards firewall, system, and DHCP events for network visibility. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline.
+Windows telemetry is stored in dedicated Splunk indexes. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. pfSense forwards firewall, system, and DHCP events for network visibility. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline.
 
 ## Detection Engineering
 
@@ -124,11 +161,17 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 ├── detections/
 │   └── splunk/                  # Catalog and DET-001 through DET-008
 ├── docs/
+│   ├── cowrie-honeypot-deployment.md
 │   ├── lab-engineering-notes.md
 │   ├── splunk_index_precedence_EN.md
+│   ├── troubleshooting-cowrie-splunk-ingestion.md
 │   └── troubleshooting-pfsense-bridged-wan-dhcp-conflict.md
+├── splunk/
+│   └── cowrie-example-searches.md
 └── screenshots/                # Detection and architecture evidence
 ```
+
+Honeypot documentation: [Cowrie deployment](docs/cowrie-honeypot-deployment.md) · [Splunk ingestion troubleshooting](docs/troubleshooting-cowrie-splunk-ingestion.md) · [Example SPL searches](splunk/cowrie-example-searches.md)
 
 ## Current Status / Known Limitations
 
@@ -136,6 +179,7 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 - DET-004 remains Experimental because geo-IP is a weak signal and both validation hits were confirmed as false positives.
 - DET-003 remains a raw search because Windows Event 7045 lacks the required CIM Change field extractions in the current configuration.
 - DET-006 remains a raw search because the CIM `Authentication.src` override is unresolved.
+- Cowrie is operational on LINUX-HONEYPOT01; SSH deception, JSON logging, Universal Forwarder transport, newline-delimited event parsing, and JSON field extraction have been validated in Splunk.
 - Suricata is installed and integrated with pfSense, but Suricata alert ingestion into Splunk is incomplete.
 - The pfSense WAN uses a private upstream address and a Wi-Fi bridge; the private address is not publicly routable, and the Wi-Fi uplink has shown stability issues.
 
