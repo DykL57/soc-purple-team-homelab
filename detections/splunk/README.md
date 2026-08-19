@@ -12,5 +12,6 @@ The catalog links each detection to its logic, validation evidence, limitations,
 | DET-006 | Local Administrator SMB brute force | Windows Security 4625 | T1110.001 | Validated | [DET-006](DET-006-local-admin-smb-brute-force.md) |
 | DET-007 | Encoded PowerShell | Sysmon 1 | T1059.001 | Validated | [DET-007](DET-007-encoded-powershell.md) |
 | DET-008 | Windows Whoami User Discovery | Sysmon 1 | T1033 | Validated | [DET-008](DET-008-whoami-user-discovery.md) |
+| DET-009 | Sliver C2 Communication | Sysmon 3 | T1071 | Validated | [DET-009](DET-009-sliver-c2-communication.md) |
 
 [Return to the project overview](../../README.md)
