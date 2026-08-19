@@ -27,12 +27,12 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 - Two domain-joined Windows endpoints with Sysmon and Splunk Universal Forwarder
 - pfSense routing, firewall policy, DHCP, and Suricata IDS/IPS across segmented zones
 - Splunk Enterprise pipelines for Windows telemetry and pfSense syslog
-- Eight documented Splunk detections with attack or traffic-based validation evidence
+- Nine documented Splunk detections with attack or traffic-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
 
 ## Key Project Highlights
 
-- Validated eight detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, and user discovery.
+- Validated nine detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, and command-and-control communication.
 - Identified 759 distinct destination ports touched in one minute during controlled vertical-scan validation.
 - Captured 2,651 failed SMB logons against a local Administrator account and documented the Windows RID 500 lockout limitation.
 - Investigated stale GeoLite2 results, confirmed the observed hits as false positives, and added VirusTotal enrichment to the existing search workflow.
@@ -51,6 +51,7 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 | pfSense CE 2.8.1 | Routing, firewalling, DHCP, and syslog |
 | Suricata | IDS/IPS installed and integrated with pfSense; Splunk ingestion pending |
 | Cowrie | SSH/Telnet deception, credential capture, and attacker command/session telemetry |
+| Sliver | Controlled command-and-control simulation for authorized Purple Team validation |
 | Kali Linux | Controlled attack-simulation platform |
 | VMware Workstation | Virtualization and network segmentation |
 
@@ -61,7 +62,7 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 | VMnet0 | WAN / upstream | pfSense WAN | pfSense | Upstream connectivity |
 | VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01 | Servers, infrastructure, and SIEM |
 | VMnet4 | `10.0.30.0/24` | pfSense | WIN-CL01, WIN-CL02 | Windows client network |
-| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01 (Planned) | RED_NET and security testing |
+| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01 | RED_NET and security testing |
 | VMnet7 | `10.0.60.0/24`; gateway `10.0.60.1` | pfSense DECEPTION | LINUX-HONEYPOT01 | DECEPTION zone for isolated honeypot services |
 
 ## Lab Systems
@@ -79,7 +80,7 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 | 9 | WEB-APP01 | Ubuntu Server | Apache + MariaDB / web application target | VMnet6 | `10.0.50.0/24` | `10.0.50.102` | Red / target services | Active |
 | 10 | WIN-REDTEAM01 | Windows 11 Pro | Windows Red Team workstation | VMnet6 | `10.0.50.0/24` | `10.0.50.50` | Red Team | Active |
 | 11 | LINUX-HONEYPOT01 | Ubuntu Server | Honeypot / deception host / attack telemetry collection | VMnet7 | `10.0.60.0/24` | `10.0.60.10` | Honeypot / Deception Zone | Active |
-| 12 | C2-SLIVER01 | Linux Server | Sliver C2 server / Red Team command-and-control infrastructure | VMnet6 | `10.0.50.0/24` | `10.0.50.x` planned | Red Team / C2 | Planned |
+| 12 | C2-SLIVER01 | Ubuntu Server | Sliver C2 / Purple Team command-and-control infrastructure | VMnet6 | `10.0.50.0/24` | `10.0.50.60` | Red Team | Active |
 
 ### Network Segmentation Summary
 
@@ -144,6 +145,7 @@ Windows telemetry is stored in dedicated Splunk indexes. linux-srv01 provides Sy
 | [DET-006](detections/splunk/DET-006-local-admin-smb-brute-force.md) | Local Administrator SMB brute force | Windows Security 4625 | T1110.001 | Validated |
 | [DET-007](detections/splunk/DET-007-encoded-powershell.md) | Encoded PowerShell | Sysmon 1 | T1059.001 | Validated |
 | [DET-008](detections/splunk/DET-008-whoami-user-discovery.md) | Windows Whoami User Discovery | Sysmon 1 | T1033 | Validated |
+| [DET-009](detections/splunk/DET-009-sliver-c2-communication.md) | Sliver C2 Communication | Sysmon 3 | T1071 | Validated |
 
 See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 
@@ -159,10 +161,11 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 .
 ├── README.md
 ├── detections/
-│   └── splunk/                  # Catalog and DET-001 through DET-008
+│   └── splunk/                  # Catalog and DET-001 through DET-009
 ├── docs/
 │   ├── cowrie-honeypot-deployment.md
 │   ├── lab-engineering-notes.md
+│   ├── sliver-c2-deployment.md
 │   ├── splunk_index_precedence_EN.md
 │   ├── troubleshooting-cowrie-splunk-ingestion.md
 │   └── troubleshooting-pfsense-bridged-wan-dhcp-conflict.md
@@ -173,13 +176,16 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 
 Honeypot documentation: [Cowrie deployment](docs/cowrie-honeypot-deployment.md) · [Splunk ingestion troubleshooting](docs/troubleshooting-cowrie-splunk-ingestion.md) · [Example SPL searches](splunk/cowrie-example-searches.md)
 
+Purple Team C2 validation: [Sliver deployment](docs/sliver-c2-deployment.md) · [DET-009 — Sliver C2 Communication](detections/splunk/DET-009-sliver-c2-communication.md)
+
 ## Current Status / Known Limitations
 
-- Eight detections are documented; none are claimed to be production-ready.
+- Nine detections are documented; none are claimed to be production-ready.
 - DET-004 remains Experimental because geo-IP is a weak signal and both validation hits were confirmed as false positives.
 - DET-003 remains a raw search because Windows Event 7045 lacks the required CIM Change field extractions in the current configuration.
 - DET-006 remains a raw search because the CIM `Authentication.src` override is unresolved.
 - Cowrie is operational on LINUX-HONEYPOT01; SSH deception, JSON logging, Universal Forwarder transport, newline-delimited event parsing, and JSON field extraction have been validated in Splunk.
+- DET-009 is a deterministic lab detection for known C2 infrastructure; TCP/8888 alone is not treated as a universal Sliver indicator.
 - Suricata is installed and integrated with pfSense, but Suricata alert ingestion into Splunk is incomplete.
 - The pfSense WAN uses a private upstream address and a Wi-Fi bridge; the private address is not publicly routable, and the Wi-Fi uplink has shown stability issues.
 
