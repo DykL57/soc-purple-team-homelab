@@ -17,7 +17,7 @@ This repository documents a segmented, enterprise-style home lab used to practic
 
 ## Architecture
 
-![SOC and Purple Team home lab architecture](screenshots/Network-Architecture-Diagram_4.png)
+![SOC and Purple Team home lab architecture](screenshots/Network-Architecture-Diagram_5.png)
 
 pfSense is the only routing path between isolated VMware host-only networks. Its WAN receives a private RFC1918 address from the upstream router; the upstream router, not pfSense's WAN address, provides Internet-facing NAT.
 
@@ -27,6 +27,7 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 - Two domain-joined Windows endpoints with Sysmon and Splunk Universal Forwarder
 - pfSense routing, firewall policy, DHCP, and Suricata IDS/IPS across segmented zones
 - Splunk Enterprise pipelines for Windows telemetry and pfSense syslog
+- An isolated malware-analysis network with local fake DNS and Internet-service simulation
 - Nine documented Splunk detections with attack or traffic-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
 
@@ -52,6 +53,7 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 | Suricata | IDS/IPS installed and integrated with pfSense; Splunk ingestion pending |
 | Cowrie | SSH/Telnet deception, credential capture, and attacker command/session telemetry |
 | Sliver | Controlled command-and-control simulation for authorized Purple Team validation |
+| REMnux + dnsmasq + INetSim | Isolated malware-analysis support, fake DNS, and simulated Internet services |
 | Kali Linux | Controlled attack-simulation platform |
 | VMware Workstation | Virtualization and network segmentation |
 
@@ -64,23 +66,26 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 | VMnet4 | `10.0.30.0/24` | pfSense | WIN-CL01, WIN-CL02 | Windows client network |
 | VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01 | RED_NET and security testing |
 | VMnet7 | `10.0.60.0/24`; gateway `10.0.60.1` | pfSense DECEPTION | LINUX-HONEYPOT01 | DECEPTION zone for isolated honeypot services |
+| VMnet9 | `10.0.90.0/24`; no gateway | None | SANDBOX01, REMNUX01 | Isolated malware analysis, detonation, and simulated network services |
 
 ## Lab Systems
 
 | # | Machine / VM | Operating System | Primary Role | VMware Network | Network / Subnet | Known IP | Zone / Purpose | Status |
 |---|---|---|---|---|---|---|---|---|
-| 1 | pfSense | pfSense / FreeBSD | Firewall, router, segmentation, DHCP | VMnet0, VMnet3, VMnet4, VMnet6, VMnet7 | WAN + `10.0.20.0/24` + `10.0.30.0/24` + `10.0.50.0/24` + `10.0.60.0/24` | Multiple interfaces | Core network / firewall | Active |
-| 2 | Rocky Linux 64-bit | Rocky Linux | Splunk Enterprise Server / SIEM | VMnet3 | `10.0.20.0/24` | `10.0.20.100` | SIEM / management | Active |
-| 3 | Ubuntu Server / linux-srv01 | Ubuntu Server | Linux server, SSH, Apache, Syslog, Splunk UF | VMnet3 | `10.0.20.0/24` | `10.0.20.41` | Server / monitoring | Active |
-| 4 | DC01 | Windows Server | Active Directory / Domain Controller | VMnet3 | `10.0.20.0/24` | `10.0.20.10` | Infrastructure / AD | Active |
+| 1 | pfSense | pfSense / FreeBSD | Firewall, router, segmentation, DHCP, Suricata | VMnet0, VMnet3, VMnet4, VMnet6, VMnet7 | WAN + `10.0.20.0/24` + `10.0.30.0/24` + `10.0.50.0/24` + `10.0.60.0/24` | Multiple interfaces | Core network / firewall | Active |
+| 2 | Rocky Linux 64-bit | Rocky Linux | Splunk Enterprise Server / SIEM / Deployment Server | VMnet3 | `10.0.20.0/24` | `10.0.20.100` | SIEM / management | Active |
+| 3 | linux-srv01 | Ubuntu Server | Linux server, SSH, Apache, Syslog, Splunk UF | VMnet3 | `10.0.20.0/24` | `10.0.20.41` | Server / monitoring | Active |
+| 4 | DC01 | Windows Server | Active Directory / Domain Controller / DNS / Splunk Deployment Client | VMnet3 | `10.0.20.0/24` | `10.0.20.10` | Infrastructure / AD | Active |
 | 5 | WIN-CL01 | Windows | Domain / endpoint client | VMnet4 | `10.0.30.0/24` | `10.0.30.100` | Windows client zone | Active |
 | 6 | WIN-CL02 | Windows | Domain / endpoint client | VMnet4 | `10.0.30.0/24` | `10.0.30.101` | Windows client zone | Active |
 | 7 | KALI-OPS01 | Kali Linux 2026.2 | Offensive security / attack workstation | VMnet6 | `10.0.50.0/24` | `10.0.50.60` | Red Team | Active |
 | 8 | FILE-SRV01 | Windows Server | File server / lab target | VMnet6 | `10.0.50.0/24` | `10.0.50.105` | Red / target services | Active |
 | 9 | WEB-APP01 | Ubuntu Server | Apache + MariaDB / web application target | VMnet6 | `10.0.50.0/24` | `10.0.50.102` | Red / target services | Active |
-| 10 | WIN-REDTEAM01 | Windows 11 Pro | Windows Red Team workstation | VMnet6 | `10.0.50.0/24` | `10.0.50.50` | Red Team | Active |
-| 11 | LINUX-HONEYPOT01 | Ubuntu Server | Honeypot / deception host / attack telemetry collection | VMnet7 | `10.0.60.0/24` | `10.0.60.10` | Honeypot / Deception Zone | Active |
-| 12 | C2-SLIVER01 | Ubuntu Server | Sliver C2 / Purple Team command-and-control infrastructure | VMnet6 | `10.0.50.0/24` | `10.0.50.60` | Red Team | Active |
+| 10 | WIN-REDTEAM01 | Windows 11 Pro | Windows Red Team workstation / Sysmon telemetry target | VMnet6 | `10.0.50.0/24` | `10.0.50.50` | Red Team | Active |
+| 11 | LINUX-HONEYPOT01 | Ubuntu Server | Cowrie honeypot / deception host / attacker-session telemetry | VMnet7 | `10.0.60.0/24` | `10.0.60.10` | Honeypot / Deception Zone | Active |
+| 12 | C2-SLIVER01 | Linux Server | Sliver C2 server / Red Team command-and-control infrastructure | VMnet6 | `10.0.50.0/24` | `10.0.50.61` | Red Team / C2 | Active |
+| 13 | REMNUX01 | REMnux / Linux | Malware-analysis support, dnsmasq, INetSim, fake Internet, and DNS simulation | VMnet9 | `10.0.90.0/24` | `10.0.90.20` | Malware Analysis / Simulation Services | Active |
+| 14 | SANDBOX01 | Windows | Isolated malware-analysis workstation / detonation and behavioral-analysis target | VMnet9 | `10.0.90.0/24` | `10.0.90.10` | Malware Analysis Sandbox | Active |
 
 ### Network Segmentation Summary
 
@@ -107,7 +112,14 @@ VMnet6 / 10.0.50.0/24
 VMnet7 / 10.0.60.0/24
 └── Honeypot / Deception
     └── LINUX-HONEYPOT01
+
+VMnet9 / 10.0.90.0/24 (isolated; no gateway or routed connection)
+└── Malware Analysis
+    ├── REMNUX01
+    └── SANDBOX01
 ```
+
+VMnet9 is separate from pfSense and every routed lab zone. It has no default gateway, host virtual adapter, Internet route, Splunk path, or cross-zone connectivity. REMNUX01 supplies local fake DNS and simulated network services only to SANDBOX01.
 
 ## Telemetry & Logging Pipeline
 
@@ -120,6 +132,8 @@ Windows Security/System logs + Sysmon
                 │
 linux-srv01 Syslog + Splunk Universal Forwarder ──► Splunk Enterprise
 
+Splunk Deployment Server (`10.0.20.100`) ──► DC01 Deployment Client
+
 pfSense firewall/system/DHCP ──► UDP 5514 syslog
 
 Suricata on pfSense ──► Splunk ingestion in progress / incomplete
@@ -129,9 +143,13 @@ KALI-OPS01 (`10.0.50.60`)
                            └─ `cowrie.json` ─► Splunk Universal Forwarder
                                                   └─ TCP/9997 ─► Splunk Enterprise (`10.0.20.100`)
                                                                      `index=honeypot`, `sourcetype=cowrie:json`
+
+Isolated VMnet9 operational flow (no external or SIEM connection):
+SANDBOX01 (`10.0.90.10`) ── fake DNS/network requests ──► REMNUX01 (`10.0.90.20`)
+REMNUX01 ── dnsmasq / INetSim responses ──► SANDBOX01
 ```
 
-Windows telemetry is stored in dedicated Splunk indexes. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. pfSense forwards firewall, system, and DHCP events for network visibility. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline.
+Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise host also acts as the Deployment Server, with DC01 documented as a Deployment Client. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. pfSense forwards firewall, system, and DHCP events for network visibility. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline. VMnet9 has no Splunk connection; its fake-service traffic remains inside the isolated malware-analysis network.
 
 ## Detection Engineering
 
@@ -165,6 +183,7 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 ├── docs/
 │   ├── cowrie-honeypot-deployment.md
 │   ├── lab-engineering-notes.md
+│   ├── malware-analysis-sandbox.md
 │   ├── sliver-c2-deployment.md
 │   ├── splunk_index_precedence_EN.md
 │   ├── troubleshooting-cowrie-splunk-ingestion.md
@@ -186,6 +205,7 @@ Purple Team C2 validation: [Sliver deployment](docs/sliver-c2-deployment.md) · 
 - DET-006 remains a raw search because the CIM `Authentication.src` override is unresolved.
 - Cowrie is operational on LINUX-HONEYPOT01; SSH deception, JSON logging, Universal Forwarder transport, newline-delimited event parsing, and JSON field extraction have been validated in Splunk.
 - DET-009 is a deterministic lab detection for known C2 infrastructure; TCP/8888 alone is not treated as a universal Sliver indicator.
+- VMnet9 is operational as an isolated malware-analysis network with SANDBOX01 and REMNUX01; it has no gateway, routed-zone connection, Internet access, or Splunk integration.
 - Suricata is installed and integrated with pfSense, but Suricata alert ingestion into Splunk is incomplete.
 - The pfSense WAN uses a private upstream address and a Wi-Fi bridge; the private address is not publicly routable, and the Wi-Fi uplink has shown stability issues.
 
@@ -198,6 +218,7 @@ Purple Team C2 validation: [Sliver deployment](docs/sliver-c2-deployment.md) · 
 - [ ] Replace the Wi-Fi WAN bridge with a dedicated wired adapter
 - [ ] Add persistent caching for VirusTotal enrichment
 - [ ] Expand detections into persistence, command-and-control, and exfiltration scenarios
+- [ ] Add malware-analysis tooling and evaluate a controlled evidence-export or Splunk-integration workflow without routing VMnet9
 
 ## About / Contact
 

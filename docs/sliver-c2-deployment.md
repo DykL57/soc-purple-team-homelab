@@ -14,27 +14,32 @@ All activity was authorized and performed against lab-owned systems inside the i
 
 | Component | Role | IP address |
 |---|---|---|
-| C2-SLIVER01 | Sliver C2 server | `10.0.50.60` |
+| C2-SLIVER01 | Sliver C2 server | `10.0.50.61` (current) |
 | WIN-REDTEAM01 | Controlled Windows Red Team endpoint | `10.0.50.50` |
 | pfSense | Firewall and network segmentation | Multiple interfaces |
 | Splunk Enterprise | SIEM and detection platform | `10.0.20.100` |
 | Sysmon | Windows endpoint telemetry | WIN-REDTEAM01 |
 | Splunk Universal Forwarder | Telemetry forwarding | WIN-REDTEAM01 |
 
+## Address Context
+
+The current authoritative address for C2-SLIVER01 is `10.0.50.61`. DET-009 was validated earlier when the same lab server used `10.0.50.60`; the SPL, screenshots, endpoint connection details, and validation evidence below intentionally preserve that historical address.
+
 ## C2-SLIVER01 Deployment
 
 `C2-SLIVER01` is an Ubuntu Server virtual machine dedicated to controlled Purple Team command-and-control simulations. Sliver was installed on the server and used only within the isolated lab.
 
-The server network configuration is:
+The network configuration captured during the historical DET-009 validation was:
 
 - Hostname: `c2-sliver01`
-- Address: `10.0.50.60/24`
+- Address at validation time: `10.0.50.60/24`
+- Current address: `10.0.50.61/24`
 - Default gateway: `10.0.50.1`
 - Network: `10.0.50.0/24`
 
 ![C2-SLIVER01 network configuration](../screenshots/sliver-c2-01-network-configuration.png)
 
-*The server reports hostname `c2-sliver01`, address `10.0.50.60/24`, and default route through `10.0.50.1`.*
+*The historical validation screenshot reports hostname `c2-sliver01`, address `10.0.50.60/24`, and default route through `10.0.50.1`.*
 
 ## Sliver mTLS Listener
 
@@ -46,7 +51,7 @@ The exercise used an mTLS listener on TCP/8888. The Sliver `jobs` output confirm
 | Transport | TCP |
 | Port | `8888` |
 | C2 server | C2-SLIVER01 |
-| C2 IP | `10.0.50.60` |
+| C2 IP | `10.0.50.60` (historical DET-009 validation address) |
 
 ![Sliver mTLS listener on TCP 8888](../screenshots/DET-009-01-sliver-listener.png)
 
