@@ -13,6 +13,7 @@ The catalog links each detection to its logic, validation evidence, limitations,
 | DET-007 | Encoded PowerShell | Sysmon 1 | T1059.001 | Validated | [DET-007](DET-007-encoded-powershell.md) |
 | DET-008 | Windows Whoami User Discovery | Sysmon 1 | T1033 | Validated | [DET-008](DET-008-whoami-user-discovery.md) |
 | DET-009 | Sliver C2 Communication | Sysmon 3 | T1071 | Validated | [DET-009](DET-009-sliver-c2-communication.md) |
+| DET-010 | Suspicious Network Service Scanning | pfSense `pfsense:firewall` | T1046 | Validated | [DET-010](DET-010-suspicious-network-service-scanning.md) |
 | DET-011 | Suspicious Write to Sensitive SMB Share | Windows Security 5145 | N/A / Context-dependent | Validated | [DET-011](DET-011-suspicious-write-to-sensitive-smb-share.md) |
 
 [Return to the project overview](../../README.md)
