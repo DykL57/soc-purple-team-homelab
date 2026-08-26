@@ -153,6 +153,15 @@ The final detection result contained:
 | Severity | High |
 | Action | Add to Triggered Alerts |
 
+### Recommended search window
+
+| Setting | Recommended value |
+|---|---|
+| Earliest | `-5m@m` |
+| Latest | `@m` |
+
+This window is a production-oriented recommendation, not a setting confirmed by the original validation evidence. Aligning the five-minute search window with the five-minute schedule reduces repeated evaluation of the same historical events.
+
 Triggered Alerts recorded the scheduled High-severity alert at `2026-08-25 15:00:02 IDT`, validating the complete path:
 
 ```text
