@@ -28,12 +28,12 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 - pfSense routing, firewall policy, DHCP, and Suricata IDS/IPS across segmented zones
 - Splunk Enterprise pipelines for Windows telemetry and pfSense syslog
 - An isolated malware-analysis network with local fake DNS and Internet-service simulation
-- Nine documented Splunk detections with attack or traffic-based validation evidence
+- 10 documented Splunk detections—DET-001 through DET-009, plus DET-011—with attack or traffic-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
 
 ## Key Project Highlights
 
-- Validated nine detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, and command-and-control communication.
+- Validated 10 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, and sensitive SMB-share writes.
 - Identified 759 distinct destination ports touched in one minute during controlled vertical-scan validation.
 - Captured 2,651 failed SMB logons against a local Administrator account and documented the Windows RID 500 lockout limitation.
 - Investigated stale GeoLite2 results, confirmed the observed hits as false positives, and added VirusTotal enrichment to the existing search workflow.
@@ -164,6 +164,7 @@ Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise h
 | [DET-007](detections/splunk/DET-007-encoded-powershell.md) | Encoded PowerShell | Sysmon 1 | T1059.001 | Validated |
 | [DET-008](detections/splunk/DET-008-whoami-user-discovery.md) | Windows Whoami User Discovery | Sysmon 1 | T1033 | Validated |
 | [DET-009](detections/splunk/DET-009-sliver-c2-communication.md) | Sliver C2 Communication | Sysmon 3 | T1071 | Validated |
+| [DET-011](detections/splunk/DET-011-suspicious-write-to-sensitive-smb-share.md) | Suspicious Write to Sensitive SMB Share | Windows Security 5145 | N/A / Context-dependent | Validated |
 
 See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 
@@ -179,7 +180,7 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 .
 ├── README.md
 ├── detections/
-│   └── splunk/                  # Catalog and DET-001 through DET-009
+│   └── splunk/                  # Catalog: DET-001 through DET-009, plus DET-011
 ├── docs/
 │   ├── cowrie-honeypot-deployment.md
 │   ├── lab-engineering-notes.md
@@ -199,7 +200,7 @@ Purple Team C2 validation: [Sliver deployment](docs/sliver-c2-deployment.md) · 
 
 ## Current Status / Known Limitations
 
-- Nine detections are documented; none are claimed to be production-ready.
+- 10 detections are documented—DET-001 through DET-009, plus DET-011; none are claimed to be production-ready.
 - DET-004 remains Experimental because geo-IP is a weak signal and both validation hits were confirmed as false positives.
 - DET-003 remains a raw search because Windows Event 7045 lacks the required CIM Change field extractions in the current configuration.
 - DET-006 remains a raw search because the CIM `Authentication.src` override is unresolved.
