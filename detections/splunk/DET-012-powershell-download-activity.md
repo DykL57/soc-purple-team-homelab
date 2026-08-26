@@ -148,10 +148,11 @@ The same search over the displayed seven-day range returned only the lab validat
 |---|---|
 | Alert title | `DET-012 - PowerShell Download Activity` |
 | Type | Scheduled |
+| Trigger condition | Number of Results > 0 |
 | Severity | High |
 | Mode | Per Result |
 
-Triggered Alerts confirmed that DET-012 fired successfully.
+The alert configuration used a result-count trigger of Number of Results > 0. The configuration screenshot confirms the trigger condition, while the final Triggered Alerts evidence confirms that the saved DET-012 alert successfully fired as a Scheduled High-severity Per Result alert.
 
 ![DET-012 Triggered Alert](../../screenshots/DET-012-20-alert-trigger.png)
 
