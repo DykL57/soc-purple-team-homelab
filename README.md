@@ -6,6 +6,8 @@ This repository documents a segmented, enterprise-style home lab used to practic
 
 > Core SIEM platform: **Splunk Enterprise**. Suricata is deployed on pfSense; Suricata alert ingestion into Splunk is currently in progress.
 
+> **Public sanitization:** This repository represents an isolated cybersecurity home lab. Documented IP addresses are private lab addressing unless explicitly stated otherwise, and all identities are lab/test accounts. Screenshots and evidence are reviewed before publication; credentials, secrets, public endpoints, and sensitive operational information are intentionally excluded.
+
 ## Quick Navigation
 
 - [Architecture](#architecture)

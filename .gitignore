@@ -1,0 +1,62 @@
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.ovpn
+wg*.conf
+
+# Credential and configuration exports
+credentials.*
+secrets.*
+auth.json
+cookies.txt
+config.xml
+config.xml.*
+*.mobileconfig
+credential-export/
+config-export/
+
+# Logs, captures, databases, and raw evidence
+*.log
+*.pcap
+*.pcapng
+*.evtx
+*.etl
+*.dmp
+*.db
+*.sqlite
+*.sqlite3
+
+# Archives, backups, and temporary files
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
+*.swp
+*~
+
+# OS and editor artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Private working areas and Notion exports
+private/
+internal/
+notes-private/
+raw-evidence/
+notion-export/
