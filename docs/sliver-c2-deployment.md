@@ -73,7 +73,9 @@ After the controlled implant executed on WIN-REDTEAM01, it established an mTLS s
 
 `WIN-REDTEAM01 (10.0.50.50) → C2-SLIVER01 (10.0.50.60:8888)`
 
-The Sliver console reported the session as alive and showed the endpoint hostname, `redadmin` user, Windows/amd64 platform, and mTLS transport.
+The Sliver console reported the session as alive and showed the endpoint hostname, `redoperator` lab user, Windows/amd64 platform, and mTLS transport.
+
+`redoperator` is a sanitized role-based alias used in the public documentation; the unchanged historical screenshot displays the original lab/test username recorded during validation.
 
 ![Active Sliver session from WIN-REDTEAM01](../screenshots/DET-009-02-active-session.png)
 

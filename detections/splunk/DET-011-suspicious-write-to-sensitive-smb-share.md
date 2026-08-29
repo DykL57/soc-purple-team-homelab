@@ -18,10 +18,12 @@ Identify successful write operations against designated sensitive SMB shares and
 | Source client | WIN-CL01 — `10.0.30.100` |
 | Domain controller | DC01 — `10.0.20.10` |
 | Splunk Enterprise | `10.0.20.100` |
-| Validated account | `LAB\daniel.it` |
+| Validated account | `LAB\it.operator` (public role-based alias) |
 | Validated group | `GG_FS_IT_RW` |
 | Sensitive shares | `IT`, `Finance` |
 | Validated target | `\\10.0.50.105\IT` |
+
+`LAB\it.operator` is a sanitized role-based alias used only in the public documentation. Historical screenshots remain unchanged and may display the original lab/test username recorded during validation.
 
 FILE-SRV01 exposed the `IT` and `Finance` shares, and the required File Share and Detailed File Share auditing was enabled before validation.
 
@@ -91,10 +93,10 @@ This is an environment-specific field-mapping finding and must be revalidated if
 
 ## Controlled Simulation
 
-WIN-CL01 established an authenticated connection to the `IT` share using the validated domain account:
+WIN-CL01 established an authenticated connection to the `IT` share using the validated domain account. The public command below represents that account with its sanitized role-based alias:
 
 ```cmd
-net use \\10.0.50.105\IT /user:LAB\daniel.it *
+net use \\10.0.50.105\IT /user:LAB\it.operator *
 ```
 
 The password was entered interactively and is not included in this repository.
@@ -119,13 +121,13 @@ FILE-SRV01 generated Event ID 5145 telemetry after the controlled write, and Spl
 
 ![Splunk Event ID 5145 file-write validation](../../screenshots/DET-011-39-splunk-5145-file-write-validation.png)
 
-*Splunk shows the validated `daniel.it` write to `DET-011-write-test.txt`, alongside non-write access checks that do not independently trigger the detection.*
+*Splunk shows the validated lab operator write to `DET-011-write-test.txt`, alongside non-write access checks that do not independently trigger the detection.*
 
 The final detection result contained:
 
 | Field | Validated value |
 |---|---|
-| `Account_Name` | `daniel.it` |
+| `Account_Name` | `it.operator` (public role-based alias) |
 | `Account_Domain` | `LAB` |
 | `src_ip` | `10.0.30.100` |
 | `Share_Name` | `\\*\IT` |
@@ -268,7 +270,24 @@ pfSense was configured with the `AD_RPC_DYNAMIC` alias for `49152:65535` and a T
 
 The main narrative embeds 12 screenshots selected from the final 29-file evidence set. All 29 DET-011 screenshots are preserved in the repository's `screenshots/` directory.
 
-Additional supporting screenshots preserved but not embedded include authentication-failure field validation, pre-validation searches, audit-policy checks, blocked DNS/core-port evidence, alias and rule configuration, DNS/Kerberos/LDAP/SMB connectivity checks, secure-channel and account/group validation, RPC 135 evidence, LSASS service association, and intermediate Splunk searches.
+Historical screenshots remain unmodified and may display the original lab/test username.
+
+### Supporting / Engineering Evidence
+
+| Evidence | Purpose |
+|---|---|
+| [Windows 4625 field validation](../../screenshots/DET-011-02-windows-4625-field-validation.png) | Confirms authentication-failure fields available during troubleshooting. |
+| [Object-access audit-policy review](../../screenshots/DET-011-05-file-srv01-object-access-audit-policy.png) | Records the audit-policy state used to generate file-share telemetry. |
+| [Blocked FILE-SRV01-to-DC01 DNS traffic](../../screenshots/DET-011-06-pfsense-file-srv01-to-dc01-dns-block.png) | Shows the initial segmentation issue affecting domain operations. |
+| [AD core-port alias](../../screenshots/DET-011-08-pfsense-ad-dc-core-ports-alias.png) | Documents the restricted port alias created during remediation. |
+| [DC DNS and Kerberos connectivity](../../screenshots/DET-011-11-file-srv01-dc-dns-kerberos-connectivity.png) | Validates core domain-service reachability from FILE-SRV01. |
+| [WIN-CL01 DNS and Kerberos validation](../../screenshots/DET-011-13-win-cl01-dns-kerberos-connectivity-validation.png) | Preserves client-side domain connectivity evidence. |
+| [Secure-channel validation](../../screenshots/DET-011-15-win-cl01-secure-channel-validation.png) | Confirms the client-to-domain trust channel remained healthy. |
+| [LDAP and SMB connectivity failure](../../screenshots/DET-011-17-file-srv01-dc-ad-service-connectivity-failure.png) | Captures the remaining service-access failure before RPC remediation. |
+| [LDAP and SMB connectivity success](../../screenshots/DET-011-19-file-srv01-dc-ldap-smb-connectivity-validation.png) | Confirms required domain-service connectivity after rule changes. |
+| [Blocked RPC endpoint-mapper traffic](../../screenshots/DET-011-21-pfsense-blocked-ad-rpc-135-evidence.png) | Supports the investigation of RPC-dependent authentication. |
+| [LSASS domain-service association](../../screenshots/DET-011-27-dc01-lsass-domain-services-validation.png) | Associates the listening process with domain services. |
+| [LSASS Active Directory services](../../screenshots/DET-011-28-dc01-lsass-ad-services-validation.png) | Provides additional process-to-service validation on DC01. |
 
 ## Detection Summary
 
@@ -283,7 +302,7 @@ Additional supporting screenshots preserved but not embedded include authenticat
 | Target host | FILE-SRV01 — `10.0.50.105` |
 | Source host | WIN-CL01 — `10.0.30.100` |
 | Sensitive shares | `IT`, `Finance` |
-| Validated account | `LAB\daniel.it` |
+| Validated account | `LAB\it.operator` (public role-based alias) |
 | Validated object | `DET-011-write-test.txt` |
 | Alert type | Scheduled, every 5 minutes |
 | Triggered Alert | High severity, Digest, validated |

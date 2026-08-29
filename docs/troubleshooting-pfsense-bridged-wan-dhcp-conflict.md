@@ -6,7 +6,7 @@
 
 ## Goal
 
-Give pfSense's WAN interface a real IP address from the Cellcom ISP router (instead of VMware's internal NAT), so pfSense could see and log real inbound/outbound traffic and forward it to Splunk via syslog.
+Move pfSense's WAN interface from VMware's internal NAT to an upstream-router DHCP lease, so pfSense could see and log inbound/outbound traffic and forward it to Splunk via syslog.
 
 ## Starting state
 
@@ -16,9 +16,9 @@ Give pfSense's WAN interface a real IP address from the Cellcom ISP router (inst
 
 ## Step 1 — Switch WAN to Bridged
 
-**Change:** `PFSENSE01` Network Adapter 1 → `Bridged`, bridged to a newly-enabled onboard Wi-Fi adapter (since the host's single wired Ethernet port was already in use and VMware requires an unused physical adapter to create a new Bridged network).
+**Change:** `PFSENSE01` Network Adapter 1 → `Bridged`, mapped to a dedicated host network adapter available for VMware bridged networking.
 
-**Result:** WAN interface received a real DHCP lease from the Cellcom router (`10.100.102.14/24`) — confirmed via `Status → Interfaces → WAN` in pfSense.
+**Result:** The WAN interface received a private DHCP lease from the upstream router (`10.100.102.14/24`) — confirmed via `Status → Interfaces → WAN` in pfSense.
 
 ## Step 2 — Lost access to the pfSense Web GUI
 
@@ -43,7 +43,7 @@ Give pfSense's WAN interface a real IP address from the Cellcom ISP router (inst
 **Symptom:** After moving Splunk to `VMnet3`, `ping` to the Splunk server's expected new address failed from the host, and the Splunk GUI was unreachable.
 
 **Root cause investigation:**
-- `ipconfig /all` on the host showed a `VMware Network Adapter VMnet3` interface existed and was physically present, but had **no IPv4 address** — only a link-local IPv6 address.
+- `ipconfig /all` on the host showed that the `VMware Network Adapter VMnet3` interface existed but had **no IPv4 address** — only a link-local IPv6 address.
 - Checked `VMware Virtual Network Editor → VMnet3` and found VMware's **own built-in DHCP server** was enabled on that network (`DHCP: Enabled` in the network list) — running *in parallel* with pfSense's own DHCP server on the same LAN interface (em1). Two DHCP servers competing on one L2 segment is a known cause of intermittent or total DHCP failure.
 - Disabled VMware's local DHCP service for VMnet3 (`Virtual Network Editor → VMnet3 → uncheck "Use local DHCP service to distribute IP address to VMs"`), so pfSense would be the sole DHCP authority on that segment, as intended by the original lab design.
 - After disabling VMware's DHCP and re-running `ipconfig /release` / `/renew`, the host adapter still received no lease — it fell back to an **APIPA** address (`169.254.x.x`), confirming pfSense's own DHCP server also wasn't responding to the request.
@@ -80,7 +80,7 @@ To prevent the Splunk server's IP from ever changing on lease renewal (critical 
 
 ```
 Services → DHCP Server → LAN → Add Static Mapping
-MAC Address: 00:0c:29:d4:e1:0e
+MAC Address: <VMware-generated MAC>
 IP Address:  10.0.20.100
 Description: splunk_rocky_linux
 ```
@@ -95,7 +95,7 @@ This freed `10.0.20.100` exclusively for the Splunk server's static mapping. Sav
 
 ## Outcome
 
-- pfSense WAN has a real, routable IP from the ISP.
+- pfSense WAN receives a private DHCP lease from the upstream router.
 - pfSense GUI reachable via LAN from the host (static IP).
 - Splunk server relocated to the correct lab zone (`VMnet3`, LAN), with a permanent static DHCP mapping (`10.0.20.100`).
 - pfSense syslog (Firewall/System/DHCP events) successfully reaching Splunk on UDP 5514, confirmed via `tcpdump` and `index=pfsense` search results.

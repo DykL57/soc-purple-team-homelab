@@ -222,15 +222,18 @@ The test artifact was a benign text file containing a validation string. No malw
 
 All 22 supplied DET-012 screenshots are preserved under `screenshots/`. The primary narrative embeds 15; the remaining evidence is retained without making unsupported claims.
 
-Supporting screenshots preserved but not embedded:
+Historical screenshots remain unmodified and may display original lab/test usernames.
 
-- `DET-012-02-process-creation-fields.png`
-- `DET-012-03-network-connection-fields.png`
-- `DET-012-04-file-creation-fields.png`
-- `DET-012-05-http-server-start.png`
-- `DET-012-09a-initial-search-no-results.png`
-- `DET-012-16-full-chain.png`
-- `DET-012-21-alert-configuration.png`
+### Supporting / Engineering Evidence
+
+| Evidence | Purpose |
+|---|---|
+| [Process-creation field review](../../screenshots/DET-012-02-process-creation-fields.png) | Confirms the Sysmon Event ID 1 fields used by the detection. |
+| [Network-connection field review](../../screenshots/DET-012-03-network-connection-fields.png) | Confirms supporting Event ID 3 process and destination context. |
+| [File-creation field review](../../screenshots/DET-012-04-file-creation-fields.png) | Confirms supporting Event ID 11 file-path and process context. |
+| [Initial scoped search with no results](../../screenshots/DET-012-09a-initial-search-no-results.png) | Preserves the negative-result troubleshooting step before final validation. |
+| [Full correlated event chain](../../screenshots/DET-012-16-full-chain.png) | Shows the process, network, and file telemetry assembled during development. |
+| [Alert-configuration evidence](../../screenshots/DET-012-21-alert-configuration.png) | Records the supplied alert settings while preserving documented limitations. |
 
 ## Status
 
