@@ -58,6 +58,22 @@ Some `dpinger` syslog messages arrived duplicated. The duplication remains unexp
 
 The VirusTotal lookup initially failed because the entire lab had lost outbound connectivity. pfSense reported the WAN interface as up while its gateway showed 100% packet loss. Reconnecting Wi-Fi and disabling power-saving restored connectivity; a dedicated wired WAN adapter remains the durable planned fix.
 
+### Sysmon `NetworkConnect` include-rule visibility
+
+During the internal GoPhish exercise, GoPhish recorded a link click and pfSense recorded WIN-CL01 traffic to PHISH-GOPHISH, but the expected Microsoft Edge Sysmon Event ID 3 was initially absent. Network connection logging was enabled with `NetworkConnect onmatch="include"`, and Edge did not match the active include rules. After the active configuration was backed up and verified, a targeted `msedge.exe` rule was added, the XML was validated and reloaded, and a fresh click produced the expected event. Absence of telemetry was a coverage gap, not evidence that the activity had not occurred.
+
+### Resilient pfSense payload parsing
+
+The pfSense TCP/UDP extraction expected a legacy `filterlog[PID]:` prefix, while current events used an RFC5424-style `filterlog PID - -` prefix. The extraction was redesigned around the stable pfSense CSV payload instead of the transport wrapper. Validation progressed from temporary `rex`, through `btool --debug` and effective-configuration checks, to a final search that required no `rex` repair.
+
+### Postfix `queue_id` correlation
+
+One message produces multiple Postfix events across SMTP acceptance, cleanup, queue management, delivery, and removal. The `queue_id` is the stable lifecycle key. Searches should prefer `stats` grouped by `queue_id` over `transaction` when that key is available.
+
+### Endpoint and network telemetry correlation
+
+The final phishing-link investigation correlated Sysmon and pfSense using source IP, source port, destination IP, destination port, and time proximity. Sysmon supplied user and process attribution; pfSense independently confirmed the routed flow. Duplicate firewall records across interfaces or directions must not be interpreted as additional user clicks. See [MAIL-SRV01 and GoPhish Internal Phishing Simulation](mail-srv01-gophish-phishing-simulation.md).
+
 ## Lab Hygiene
 
 Attack simulations use VM snapshots and disposable accounts. Test accounts and temporary elevated memberships are removed after validation. The VirusTotal API key is stored only on the Splunk server in a local file with restricted permissions and is not committed to this repository.

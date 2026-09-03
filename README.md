@@ -23,23 +23,29 @@ This repository documents a segmented, enterprise-style home lab used to practic
 
 pfSense is the only routing path between isolated VMware host-only networks. Its WAN receives a private RFC1918 address from the upstream router; the upstream router, not pfSense's WAN address, provides Internet-facing NAT.
 
+The inventory and network tables below include the current MAIL-SRV01 and PHISH-GOPHISH additions. The visual architecture diagram predates those two systems and will be updated separately.
+
 ## What I Built
 
 - Active Directory domain services and DNS on Windows Server 2022
 - Two domain-joined Windows endpoints with Sysmon and Splunk Universal Forwarder
 - pfSense routing, firewall policy, DHCP, and Suricata IDS/IPS across segmented zones
 - Splunk Enterprise pipelines for Windows telemetry and pfSense syslog
+- A Linux-based internal mail stack using Postfix, Dovecot, Thunderbird, internal TLS, and Splunk mail telemetry
+- An internal GoPhish simulation integrated with MAIL-SRV01 and validated through GoPhish, Sysmon, pfSense, and Splunk
 - An isolated malware-analysis network with local fake DNS and Internet-service simulation
-- 12 documented Splunk detections—DET-001 through DET-012—with attack or traffic-based validation evidence
+- 13 documented Splunk detections—DET-001 through DET-013—with attack or traffic-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
 
 ## Key Project Highlights
 
-- Validated 12 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, sensitive SMB-share writes, and PowerShell download activity.
+- Documented 13 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, sensitive SMB-share writes, PowerShell download activity, and a lab-specific browser connection to known phishing infrastructure.
 - Identified 759 distinct destination ports touched in one minute during controlled vertical-scan validation.
 - Captured 2,651 failed SMB logons against a local Administrator account and documented the Windows RID 500 lockout limitation.
 - Investigated stale GeoLite2 results, confirmed the observed hits as false positives, and added VirusTotal enrichment to the existing search workflow.
 - Deployed Cowrie in a dedicated DECEPTION zone and resolved a multi-layer Splunk ingestion issue involving filesystem access, temporary monitor configurations, and newline-delimited JSON event breaking; final validation returned 23 individual events with extracted fields.
+- Built an internal Postfix/Dovecot mail workflow and safe GoPhish campaign, then correlated the recipient's Microsoft Edge connection across Sysmon Event ID 3 and pfSense using the complete network tuple and time proximity.
+- Identified a Sysmon `NetworkConnect` include-rule visibility gap and a pfSense prefix-dependent parsing failure, corrected both, and repeated the activity to validate final telemetry rather than treating missing events as missing activity.
 - Preserved root-cause findings for CIM mapping, Windows log placement, DHCP configuration, timestamps, and WAN stability in [Lab Engineering Notes](docs/lab-engineering-notes.md).
 
 ## Technology Stack
@@ -53,6 +59,10 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 | Splunk CIM Add-on | Authentication data-model normalization |
 | pfSense CE 2.8.1 | Routing, firewalling, DHCP, and syslog |
 | Suricata | IDS/IPS installed and integrated with pfSense; Splunk ingestion pending |
+| Postfix | Internal SMTP transport, queueing, and local message delivery on MAIL-SRV01 |
+| Dovecot | IMAP/IMAPS access to Linux-local lab mailboxes |
+| Thunderbird | Mail client used by the controlled recipient on WIN-CL01 |
+| GoPhish | Authorized internal phishing-simulation platform; no credentials collected |
 | Cowrie | SSH/Telnet deception, credential capture, and attacker command/session telemetry |
 | Sliver | Controlled command-and-control simulation for authorized Purple Team validation |
 | REMnux + dnsmasq + INetSim | Isolated malware-analysis support, fake DNS, and simulated Internet services |
@@ -64,9 +74,9 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 | Network / zone | Subnet / gateway | pfSense connection | Connected systems | Purpose |
 |---|---|---|---|---|
 | VMnet0 | WAN / upstream | pfSense WAN | pfSense | Upstream connectivity |
-| VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01 | Servers, infrastructure, and SIEM |
+| VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01, MAIL-SRV01 | Servers, infrastructure, mail, and SIEM |
 | VMnet4 | `10.0.30.0/24` | pfSense | WIN-CL01, WIN-CL02 | Windows client network |
-| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01 | RED_NET and security testing |
+| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01, PHISH-GOPHISH | RED_NET, simulation infrastructure, and security testing |
 | VMnet7 | `10.0.60.0/24`; gateway `10.0.60.1` | pfSense DECEPTION | LINUX-HONEYPOT01 | DECEPTION zone for isolated honeypot services |
 | VMnet9 | `10.0.90.0/24`; no gateway | None | SANDBOX01, REMNUX01 | Isolated malware analysis, detonation, and simulated network services |
 
@@ -88,6 +98,8 @@ pfSense is the only routing path between isolated VMware host-only networks. Its
 | 12 | C2-SLIVER01 | Linux Server | Sliver C2 server / Red Team command-and-control infrastructure | VMnet6 | `10.0.50.0/24` | `10.0.50.61` | Red Team / C2 | Active |
 | 13 | REMNUX01 | REMnux / Linux | Malware-analysis support, dnsmasq, INetSim, fake Internet, and DNS simulation | VMnet9 | `10.0.90.0/24` | `10.0.90.20` | Malware Analysis / Simulation Services | Active |
 | 14 | SANDBOX01 | Windows | Isolated malware-analysis workstation / detonation and behavioral-analysis target | VMnet9 | `10.0.90.0/24` | `10.0.90.10` | Malware Analysis Sandbox | Active |
+| 15 | MAIL-SRV01 | Ubuntu Server | Postfix SMTP, Dovecot IMAP/IMAPS, Linux-local mailboxes, TLS, Splunk UF | VMnet3 | `10.0.20.0/24` | `10.0.20.30` | Internal mail / telemetry | Active |
+| 16 | PHISH-GOPHISH | Ubuntu Server | GoPhish internal phishing-simulation platform | VMnet6 | `10.0.50.0/24` | `10.0.50.70` | Purple Team simulation infrastructure | Active |
 
 ### Network Segmentation Summary
 
@@ -96,7 +108,8 @@ VMnet3 / 10.0.20.0/24
 └── Infrastructure / Servers / SIEM
     ├── Splunk Enterprise
     ├── DC01
-    └── linux-srv01
+    ├── linux-srv01
+    └── MAIL-SRV01
 
 VMnet4 / 10.0.30.0/24
 └── Windows Clients
@@ -109,7 +122,8 @@ VMnet6 / 10.0.50.0/24
     ├── WIN-REDTEAM01
     ├── FILE-SRV01
     ├── WEB-APP01
-    └── C2-SLIVER01
+    ├── C2-SLIVER01
+    └── PHISH-GOPHISH
 
 VMnet7 / 10.0.60.0/24
 └── Honeypot / Deception
@@ -140,6 +154,17 @@ pfSense firewall/system/DHCP ──► UDP 5514 syslog
 
 Suricata on pfSense ──► Splunk ingestion in progress / incomplete
 
+MAIL-SRV01 (`10.0.20.30`)
+    ├─ Postfix + Dovecot `mail.log` ─► Splunk Universal Forwarder
+    │                                      └─► Splunk Enterprise (`index=mail`)
+    └─ IMAPS/SMTP ─► Thunderbird on WIN-CL01
+
+PHISH-GOPHISH (`10.0.50.70`)
+    ├─ SMTP ─► MAIL-SRV01 / Postfix ─► Linux-local recipient mailbox
+    └─ HTTP TCP/80 ◄─ Microsoft Edge on WIN-CL01
+                           ├─ Sysmon Event ID 3 ─► Splunk Enterprise
+                           └─ pfSense firewall flow ─► Splunk Enterprise
+
 KALI-OPS01 (`10.0.50.60`)
     └─ SSH TCP/2222 ─► LINUX-HONEYPOT01 / Cowrie (`10.0.60.10`)
                            └─ `cowrie.json` ─► Splunk Universal Forwarder
@@ -151,7 +176,7 @@ SANDBOX01 (`10.0.90.10`) ── fake DNS/network requests ──► REMNUX01 (`1
 REMNUX01 ── dnsmasq / INetSim responses ──► SANDBOX01
 ```
 
-Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise host also acts as the Deployment Server, with DC01 documented as a Deployment Client. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. pfSense forwards firewall, system, and DHCP events for network visibility. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline. VMnet9 has no Splunk connection; its fake-service traffic remains inside the isolated malware-analysis network.
+Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise host also acts as the Deployment Server, with DC01 documented as a Deployment Client. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. MAIL-SRV01 forwards Postfix and Dovecot mail telemetry to `index=mail`; the mailboxes are Linux-local and are not represented as Active Directory-integrated. pfSense forwards firewall, system, and DHCP events for network visibility. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline. VMnet9 has no Splunk connection; its fake-service traffic remains inside the isolated malware-analysis network.
 
 ## Detection Engineering
 
@@ -169,6 +194,7 @@ Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise h
 | [DET-010](detections/splunk/DET-010-suspicious-network-service-scanning.md) | Suspicious Network Service Scanning | pfSense `pfsense:firewall` | T1046 | Validated |
 | [DET-011](detections/splunk/DET-011-suspicious-write-to-sensitive-smb-share.md) | Suspicious Write to Sensitive SMB Share | Windows Security 5145 | N/A / Context-dependent | Validated |
 | [DET-012](detections/splunk/DET-012-powershell-download-activity.md) | PowerShell Download Activity | Sysmon 1 | T1059.001 | Validated |
+| [DET-013](detections/splunk/DET-013-browser-connection-to-known-phishing-infrastructure.md) | Browser Connection to Known Phishing Infrastructure | Sysmon 3 / pfSense | T1566.002 / Scenario-dependent | Validated / Lab-specific |
 
 See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 
@@ -177,6 +203,7 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 - [DET-003 — PsExec Service Creation](detections/splunk/DET-003-psexec-service-creation.md): distinguishes the service's `LocalSystem` account from the SID that installed it and documents why the CIM Change model was not used.
 - [DET-005 — Vertical Port Scan](detections/splunk/DET-005-vertical-port-scan.md): validates a network pattern against a controlled 1,000-port scan through pfSense.
 - [DET-006 — Local Administrator SMB Brute Force](detections/splunk/DET-006-local-admin-smb-brute-force.md): captures a sustained password-guessing test and records the unresolved CIM `src` mapping gap.
+- [DET-013 — Browser Connection to Known Phishing Infrastructure](detections/splunk/DET-013-browser-connection-to-known-phishing-infrastructure.md): validates an authorized GoPhish link interaction through process-attributed Sysmon telemetry and matching pfSense flows while preserving the difference between scenario ground truth and a network connection.
 
 ## Repository Structure / Navigation
 
@@ -184,10 +211,11 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 .
 ├── README.md
 ├── detections/
-│   └── splunk/                  # Catalog and DET-001 through DET-012
+│   └── splunk/                  # Catalog and DET-001 through DET-013
 ├── docs/
 │   ├── cowrie-honeypot-deployment.md
 │   ├── lab-engineering-notes.md
+│   ├── mail-srv01-gophish-phishing-simulation.md
 │   ├── malware-analysis-sandbox.md
 │   ├── sliver-c2-deployment.md
 │   ├── splunk_index_precedence_EN.md
@@ -202,14 +230,17 @@ Honeypot documentation: [Cowrie deployment](docs/cowrie-honeypot-deployment.md) 
 
 Purple Team C2 validation: [Sliver deployment](docs/sliver-c2-deployment.md) · [DET-009 — Sliver C2 Communication](detections/splunk/DET-009-sliver-c2-communication.md)
 
+Internal phishing simulation: [MAIL-SRV01 and GoPhish project](docs/mail-srv01-gophish-phishing-simulation.md) · [DET-013 — Browser Connection to Known Phishing Infrastructure](detections/splunk/DET-013-browser-connection-to-known-phishing-infrastructure.md)
+
 ## Current Status / Known Limitations
 
-- 12 detections are documented—DET-001 through DET-012; none are claimed to be production-ready.
+- 13 detections are documented—DET-001 through DET-013; none are claimed to be production-ready.
 - DET-004 remains Experimental because geo-IP is a weak signal and both validation hits were confirmed as false positives.
 - DET-003 remains a raw search because Windows Event 7045 lacks the required CIM Change field extractions in the current configuration.
 - DET-006 remains a raw search because the CIM `Authentication.src` override is unresolved.
 - Cowrie is operational on LINUX-HONEYPOT01; SSH deception, JSON logging, Universal Forwarder transport, newline-delimited event parsing, and JSON field extraction have been validated in Splunk.
 - DET-009 is a deterministic lab detection for known C2 infrastructure; TCP/8888 alone is not treated as a universal Sliver indicator.
+- MAIL-SRV01 and PHISH-GOPHISH are internal lab services. The mailboxes are Linux-local, the GoPhish landing page uses internal HTTP, no credentials were collected, and DET-013 does not treat a browser connection alone as proof of phishing or compromise.
 - VMnet9 is operational as an isolated malware-analysis network with SANDBOX01 and REMNUX01; it has no gateway, routed-zone connection, Internet access, or Splunk integration.
 - Suricata is installed and integrated with pfSense, but Suricata alert ingestion into Splunk is incomplete.
 - The pfSense WAN uses a private upstream address and a Wi-Fi bridge; the private address is not publicly routable, and the Wi-Fi uplink has shown stability issues.
