@@ -16,5 +16,6 @@ The catalog links each detection to its logic, validation evidence, limitations,
 | DET-010 | Suspicious Network Service Scanning | pfSense `pfsense:firewall` | T1046 | Validated | [DET-010](DET-010-suspicious-network-service-scanning.md) |
 | DET-011 | Suspicious Write to Sensitive SMB Share | Windows Security 5145 | N/A / Context-dependent | Validated | [DET-011](DET-011-suspicious-write-to-sensitive-smb-share.md) |
 | DET-012 | PowerShell Download Activity | Sysmon 1 | T1059.001 | Validated | [DET-012](DET-012-powershell-download-activity.md) |
+| DET-013 | Browser Connection to Known Phishing Infrastructure | Sysmon 3 / pfSense | T1566.002 / Scenario-dependent | Validated / Lab-specific | [DET-013](DET-013-browser-connection-to-known-phishing-infrastructure.md) |
 
 [Return to the project overview](../../README.md)
