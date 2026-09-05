@@ -33,13 +33,14 @@ The current architecture diagram and the inventory and network tables below refl
 - Splunk Enterprise pipelines for Windows telemetry and pfSense syslog
 - A Linux-based internal mail stack using Postfix, Dovecot, Thunderbird, internal TLS, and Splunk mail telemetry
 - An internal GoPhish simulation integrated with MAIL-SRV01 and validated through GoPhish, Sysmon, pfSense, and Splunk
+- An Apache telemetry pipeline from WEB-APP01 to Splunk Enterprise for controlled web-attack detection engineering
 - An isolated malware-analysis network with local fake DNS and Internet-service simulation
-- 13 documented Splunk detections—DET-001 through DET-013—with attack or traffic-based validation evidence
+- 14 documented Splunk detections—DET-001 through DET-014—with attack or traffic-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
 
 ## Key Project Highlights
 
-- Documented 13 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, sensitive SMB-share writes, PowerShell download activity, and a lab-specific browser connection to known phishing infrastructure.
+- Documented 14 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, sensitive SMB-share writes, PowerShell download activity, phishing-simulation infrastructure, and XSS-like HTTP requests.
 - Identified 759 distinct destination ports touched in one minute during controlled vertical-scan validation.
 - Captured 2,651 failed SMB logons against a local Administrator account and documented the Windows RID 500 lockout limitation.
 - Investigated stale GeoLite2 results, confirmed the observed hits as false positives, and added VirusTotal enrichment to the existing search workflow.
@@ -63,6 +64,7 @@ The current architecture diagram and the inventory and network tables below refl
 | Dovecot | IMAP/IMAPS access to Linux-local lab mailboxes |
 | Thunderbird | Mail client used by the controlled recipient on WIN-CL01 |
 | GoPhish | Authorized internal phishing-simulation platform; no credentials collected |
+| Apache HTTP Server | WEB-APP01 access telemetry for controlled web-attack detection engineering |
 | Cowrie | SSH/Telnet deception, credential capture, and attacker command/session telemetry |
 | Sliver | Controlled command-and-control simulation for authorized Purple Team validation |
 | REMnux + dnsmasq + INetSim | Isolated malware-analysis support, fake DNS, and simulated Internet services |
@@ -165,6 +167,11 @@ PHISH-GOPHISH (`10.0.50.70`)
                            ├─ Sysmon Event ID 3 ─► Splunk Enterprise
                            └─ pfSense firewall flow ─► Splunk Enterprise
 
+WEB-APP01 (`10.0.50.102`)
+    └─ Apache `/var/log/apache2/access.log` ─► Splunk Universal Forwarder
+                                                └─ TCP/9997 ─► Splunk Enterprise (`10.0.20.100`)
+                                                                   `index=linux_web`, `sourcetype=apache:access`
+
 KALI-OPS01 (`10.0.50.60`)
     └─ SSH TCP/2222 ─► LINUX-HONEYPOT01 / Cowrie (`10.0.60.10`)
                            └─ `cowrie.json` ─► Splunk Universal Forwarder
@@ -195,6 +202,7 @@ Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise h
 | [DET-011](detections/splunk/DET-011-suspicious-write-to-sensitive-smb-share.md) | Suspicious Write to Sensitive SMB Share | Windows Security 5145 | N/A / Context-dependent | Validated |
 | [DET-012](detections/splunk/DET-012-powershell-download-activity.md) | PowerShell Download Activity | Sysmon 1 | T1059.001 | Validated |
 | [DET-013](detections/splunk/DET-013-browser-connection-to-known-phishing-infrastructure.md) | Browser Connection to Known Phishing Infrastructure | Sysmon 3 / pfSense | T1566.002 / Scenario-dependent | Validated / Lab-specific |
+| [DET-014](detections/splunk/DET-014-cross-site-scripting-xss-attempt.md) | Cross-Site Scripting (XSS) Attempt | Apache HTTP access logs (`linux_web`, `apache:access`) | T1190 / Scenario-dependent | Validated / Lab-specific |
 
 See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 
@@ -211,7 +219,7 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 .
 ├── README.md
 ├── detections/
-│   └── splunk/                  # Catalog and DET-001 through DET-013
+│   └── splunk/                  # Catalog and DET-001 through DET-014
 ├── docs/
 │   ├── cowrie-honeypot-deployment.md
 │   ├── lab-engineering-notes.md
@@ -222,7 +230,8 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 │   ├── troubleshooting-cowrie-splunk-ingestion.md
 │   └── troubleshooting-pfsense-bridged-wan-dhcp-conflict.md
 ├── splunk/
-│   └── cowrie-example-searches.md
+│   ├── cowrie-example-searches.md
+│   └── web_lab/                 # Apache search-time field extraction
 └── screenshots/                # Detection and architecture evidence
 ```
 
@@ -232,9 +241,11 @@ Purple Team C2 validation: [Sliver deployment](docs/sliver-c2-deployment.md) · 
 
 Internal phishing simulation: [MAIL-SRV01 and GoPhish project](docs/mail-srv01-gophish-phishing-simulation.md) · [DET-013 — Browser Connection to Known Phishing Infrastructure](detections/splunk/DET-013-browser-connection-to-known-phishing-infrastructure.md)
 
+Web application telemetry: [WEB-APP01 deployment and Apache telemetry](docs/web-app01-deployment-and-telemetry.md) · [DET-014 — Cross-Site Scripting (XSS) Attempt](detections/splunk/DET-014-cross-site-scripting-xss-attempt.md)
+
 ## Current Status / Known Limitations
 
-- 13 detections are documented—DET-001 through DET-013; none are claimed to be production-ready.
+- 14 detections are documented—DET-001 through DET-014; none are claimed to be production-ready.
 - DET-004 remains Experimental because geo-IP is a weak signal and both validation hits were confirmed as false positives.
 - DET-003 remains a raw search because Windows Event 7045 lacks the required CIM Change field extractions in the current configuration.
 - DET-006 remains a raw search because the CIM `Authentication.src` override is unresolved.

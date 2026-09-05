@@ -1,0 +1,27 @@
+WEB-APP01 Network Isolation Validation
+Date: 2026-09-05
+
+Internet connectivity test:
+curl -I --connect-timeout 5 https://download.splunk.com
+
+Result:
+curl: (28) Resolving timed out after 5000 milliseconds
+
+Status:
+Internet access BLOCKED - PASS
+
+
+Splunk receiver connectivity test:
+nc -vz 10.0.20.100 9997
+
+Result:
+Connection to 10.0.20.100 9997 port [tcp/*] succeeded!
+
+Status:
+Splunk TCP/9997 ALLOWED - PASS
+
+
+Final network state:
+WEB-APP01 -> Internet              BLOCKED
+WEB-APP01 -> Splunk TCP/9997      ALLOWED
+Temporary provisioning rule       DISABLED
