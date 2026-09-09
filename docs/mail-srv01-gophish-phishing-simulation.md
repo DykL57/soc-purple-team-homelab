@@ -56,7 +56,7 @@ MAIL-SRV01 is not a Microsoft Exchange equivalent. It is a Linux-based stack ass
 | Splunk Enterprise | `10.0.20.100` | VMnet3 | Central SIEM and search platform. |
 | pfSense | Multiple interfaces | VMnet3, VMnet4, VMnet6, and other zones | Inter-zone routing, policy enforcement, and firewall logging. |
 
-The current repository architecture image remains unchanged in this phase. The table above is the authoritative description of the two newly documented systems until the visual diagram is updated separately.
+The current repository architecture diagram includes MAIL-SRV01 and PHISH-GOPHISH in their validated network zones.
 
 ## Internal Mail Stack
 
@@ -286,6 +286,8 @@ Parsers should depend on the most stable available structure. A transport or sys
 
 The validated browser activity supports [DET-013 — Browser Connection to Known Phishing Infrastructure](../detections/splunk/DET-013-browser-connection-to-known-phishing-infrastructure.md).
 
+This document covers the end-to-end mail delivery and phishing-simulation workflow. The operational GoPhish service, logging, forwarding, field extraction, rotation, and reboot persistence are documented separately in [PHISH-GOPHISH Deployment and Telemetry](phish-gophish-deployment-and-telemetry.md).
+
 DET-013 is deliberately narrow. Sysmon provides process and user attribution; pfSense provides independent network-path evidence; GoPhish provides the campaign ground truth. A browser connection by itself does not prove phishing, credential theft, or compromise.
 
 ## Security Considerations
@@ -308,7 +310,7 @@ DET-013 is deliberately narrow. Sysmon provides process and user attribution; pf
 - pfSense can produce multiple log records for one network flow.
 - GoPhish application counts, endpoint network events, and firewall events measure different layers and cannot be compared as equal event counts.
 - No scheduled DET-013 Splunk alert is claimed or evidenced.
-- The current architecture image does not yet contain MAIL-SRV01 or PHISH-GOPHISH and will be updated separately.
+- The current architecture diagram includes MAIL-SRV01 and PHISH-GOPHISH; operational GoPhish details are maintained in the dedicated deployment document.
 
 ## Lessons Learned
 
