@@ -18,5 +18,6 @@ The catalog links each detection to its logic, validation evidence, limitations,
 | DET-012 | PowerShell Download Activity | Sysmon 1 | T1059.001 | Validated | [DET-012](DET-012-powershell-download-activity.md) |
 | DET-013 | Browser Connection to Known Phishing Infrastructure | Sysmon 3 / pfSense | T1566.002 / Scenario-dependent | Validated / Lab-specific | [DET-013](DET-013-browser-connection-to-known-phishing-infrastructure.md) |
 | DET-014 | Cross-Site Scripting (XSS) Attempt | Apache HTTP access logs (`linux_web`, `apache:access`) | T1190 / Scenario-dependent | Validated / Lab-specific | [DET-014](DET-014-cross-site-scripting-xss-attempt.md) |
+| DET-015 | GoPhish Tracked Phishing Link Click | GoPhish application log (`gophish:log`) | T1566.002 / Scenario-dependent | Validated / Lab-specific | [DET-015](DET-015-gophish-tracked-phishing-link-click.md) |
 
 [Return to the project overview](../../README.md)
