@@ -19,11 +19,23 @@ This repository documents a segmented, enterprise-style home lab used to practic
 
 ## Architecture
 
-![SOC and Purple Team home lab architecture](screenshots/Network-Architecture-Diagram_9.png)
+The lab is segmented into dedicated infrastructure, endpoint, offensive-security, deception, phishing-simulation, and isolated malware-analysis networks.
 
-pfSense is the only routing path between isolated VMware host-only networks. Its WAN receives a private RFC1918 address from the upstream router; the upstream router, not pfSense's WAN address, provides Internet-facing NAT.
+![Home SOC Purple Team Lab Architecture](screenshots/Network-Architecture-Diagram_10-dark.png)
 
-The current architecture diagram and the inventory and network tables below reflect the 17-system lab: pfSense plus 16 hosts/VMs, including the dual-interface ZEEK01 passive network sensor.
+### Architecture at a Glance
+
+- **VMnet3 — 10.0.20.0/24:** Infrastructure / Servers / SIEM
+- **VMnet4 — 10.0.30.0/24:** Windows Clients
+- **VMnet6 — 10.0.50.0/24:** Red Team / Targets / Simulation
+- **VMnet7 — 10.0.60.0/24:** Honeypot / Deception
+- **VMnet9 — 10.0.90.0/24:** Isolated Malware Analysis
+
+The environment contains **17 systems**. pfSense segments the routed lab zones, Splunk Enterprise serves as the central SIEM, and the dual-interface ZEEK01 sensor provides passive network monitoring. pfSense's WAN receives a private RFC1918 address from the upstream router, which provides Internet-facing NAT.
+
+> VMnet9 is intentionally isolated with no gateway, no pfSense connectivity, no Internet access, and no Splunk connectivity.
+
+For a text-based and version-control-friendly representation, see [`docs/lab-architecture-ascii.md`](docs/lab-architecture-ascii.md).
 
 ## What I Built
 
