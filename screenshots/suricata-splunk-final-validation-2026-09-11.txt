@@ -1,0 +1,23 @@
+Suricata interface: em2
+EVE path: /var/log/suricata/suricata_em226383/eve.json
+syslog-ng destination: 10.0.20.100:5515/TCP
+
+Splunk index: suricata
+Splunk sourcetype: suricata:eve
+Splunk source: suricata:eve
+Splunk host: 10.0.20.1
+
+Controlled HTTP validation:
+10.0.30.100 -> 10.0.20.100:8000
+/SURICATA-VALIDATION-20260910-001
+Result: PASS
+
+Controlled IDS validation:
+SID: 2017061
+Signature: ET EXPLOIT SolusVM 1.13.03 Access to solusvmc-node setuid bin
+Category: A Network Trojan was detected
+Severity: 1
+Result: PASS
+
+Final status:
+Suricata -> Splunk: ACTIVE / VALIDATED

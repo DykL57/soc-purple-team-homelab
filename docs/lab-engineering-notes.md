@@ -6,7 +6,7 @@ This document preserves implementation details and troubleshooting findings move
 
 pfSense forwards firewall, system, and DHCP events to Splunk over UDP 5514. Firewall data is searched in `index=pfsense`; repository evidence also refers to `filterlog` events and the `pfsense:firewall` sourcetype. A device-inventory lookup created from an `nmap -sn` sweep can enrich raw IP addresses with device names and types.
 
-Suricata is installed and integrated with pfSense. Suricata alert ingestion into Splunk is not complete and no Suricata-backed detection is represented as validated.
+Suricata is installed on pfSense, and its EVE JSON ingestion path to Splunk is active and validated. syslog-ng reads the `em2` EVE file and sends it over TCP/5515 to `index=suricata` with `sourcetype=suricata:eve`. Controlled HTTP telemetry and SID 2017061 alert tests validated the end-to-end path; the SID test was signature validation, not exploitation of a real SolusVM vulnerability. See [Suricata to Splunk Ingestion Validation](suricata-splunk-ingestion-validation.md).
 
 ZEEK01 is a dual-interface passive sensor. Its `ens33` management interface uses VMnet3 at `10.0.20.118`, while `ens34` has no IP address or gateway and observes VMnet6 passively. Zeek JSON is forwarded through Splunk Universal Forwarder to `index=zeek`. The VMware observation point provides partial outbound visibility; Internet return traffic is not consistently visible, even with promiscuous mode enabled.
 

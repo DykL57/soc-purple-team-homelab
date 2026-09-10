@@ -79,7 +79,7 @@ This is infrastructure and security validation. It is not DET-014 detection evid
 
 WEB-APP01 supplies the Apache access telemetry used by [DET-014 — Cross-Site Scripting (XSS) Attempt](../detections/splunk/DET-014-cross-site-scripting-xss-attempt.md). The validated detection identifies selected XSS-like request patterns after URI decoding. It does not prove JavaScript execution or successful exploitation.
 
-Suricata alert ingestion into Splunk remains pending and is not part of the validated WEB-APP01 telemetry path described here.
+Suricata alert ingestion into Splunk is now validated separately and is not part of the WEB-APP01 Universal Forwarder telemetry path described here.
 
 ## Security and Scope
 
