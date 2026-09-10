@@ -43,14 +43,6 @@
     <text x="900" y="347" text-anchor="middle" style="font-size:25px;font-weight:800;fill:#0754c7">pfSense</text>
   </g>
 
-  <!-- Physical home network: deliberately outside the lab path -->
-  <path d="M957 199H1280" class="route" stroke="#56a5ff" stroke-dasharray="10 8"/>
-  <rect x="1320" y="112" width="445" height="126" rx="12" fill="#071426" fill-opacity=".62" stroke="#82aaff" stroke-width="1.5" stroke-dasharray="9 6"/>
-  <text x="1340" y="139" class="zone-title" fill="#82aaff">HOME / IoT — 10.100.102.0/24</text>
-  <text x="1340" y="165" class="small">Gateway: Upstream Router</text>
-  <text x="1340" y="190" class="small muted">Outside normal pfSense lab routing</text>
-  <text x="1340" y="214" class="small muted">No confirmed full Zeek / Suricata visibility</text>
-
   <!-- pfSense routed zone trunks -->
   <path d="M900 368v29H245v26M900 397H610v26M900 368v29h1135v26M900 397h410v26" class="route" stroke="#22d3ee" marker-end="url(#a-cyan)"/>
 
@@ -109,7 +101,7 @@
   </g>
 
   <!-- Telemetry flows -->
-  <path d="M105 628v226H635" class="route" stroke="#22d3ee" stroke-dasharray="8 6" marker-end="url(#a-cyan)"/><text x="242" y="846" class="flow" fill="#38bdf8">Management / Deployment</text>
+  <path d="M105 628v182H635v44" class="route" stroke="#22d3ee" stroke-dasharray="8 6" marker-end="url(#a-cyan)"/><rect x="438" y="797" width="190" height="22" rx="6" fill="#071426"/><text x="533" y="813" class="flow" text-anchor="middle" fill="#38bdf8">Management / Deployment</text>
   <path d="M252 628v164h445v78" class="route" stroke="#45e36b" marker-end="url(#a-green)"/>
   <path d="M398 628v151h330v91" class="route" stroke="#45e36b" marker-end="url(#a-green)"/>
   <path d="M771 671v108h-12v91" class="route" stroke="#45e36b" marker-end="url(#a-green)"/>
@@ -137,9 +129,7 @@
   <path d="M38 978h48" class="route" stroke="#ff8a24" marker-end="url(#a-orange)"/><text x="99" y="983" class="small">Cowrie → UF → Splunk</text>
   <path d="M38 1004h48" class="route" stroke="#22d3ee" stroke-dasharray="8 6" marker-end="url(#a-cyan)"/><text x="99" y="1009" class="small">Management / Deployment</text>
 
-  <rect x="1410" y="878" width="372" height="142" rx="12" fill="#071426" stroke="#38bdf8" stroke-width="1.5"/>
-  <text x="1432" y="907" class="zone-title">17 SYSTEMS</text>
-  <text x="1432" y="932" class="small">pfSense + 16 hosts / VMs</text>
-  <text x="1432" y="965" class="zone-title" fill="#f6d32d">16 DETECTIONS</text>
-  <text x="1432" y="990" class="small">DET-001–DET-015 + DET-018</text>
+  <!-- Redraw the VMnet3 lower border above crossing telemetry layers -->
+  <path d="M34 770H652" fill="none" stroke="#1ea7ff" stroke-width="2.2" filter="url(#soft-glow)"/>
+
 </svg>
