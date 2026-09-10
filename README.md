@@ -4,7 +4,7 @@
 
 This repository documents a segmented, enterprise-style home lab used to practice SOC operations, adversary simulation, SIEM engineering, and detection validation. It demonstrates how Windows and network telemetry is collected in Splunk Enterprise, turned into defensible detections, tested in a controlled environment, and investigated with known limitations preserved.
 
-> Core SIEM platform: **Splunk Enterprise**. Suricata is deployed on pfSense; Suricata alert ingestion into Splunk is currently in progress.
+> Core SIEM platform: **Splunk Enterprise**. Suricata is deployed on pfSense, and its EVE JSON ingestion path to Splunk is active and validated.
 
 > **Public sanitization:** This repository represents an isolated cybersecurity home lab. Documented IP addresses are private lab addressing unless explicitly stated otherwise, and all identities are lab/test accounts. Screenshots and evidence are reviewed before publication; credentials, secrets, public endpoints, and sensitive operational information are intentionally excluded.
 
@@ -42,7 +42,7 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 - Active Directory domain services and DNS on Windows Server 2022
 - Two domain-joined Windows endpoints with Sysmon and Splunk Universal Forwarder
 - pfSense routing, firewall policy, DHCP, and Suricata IDS/IPS across segmented zones
-- Splunk Enterprise pipelines for Windows telemetry and pfSense syslog
+- Splunk Enterprise pipelines for Windows telemetry, pfSense syslog, and Suricata EVE JSON
 - A Linux-based internal mail stack using Postfix, Dovecot, Thunderbird, internal TLS, and Splunk mail telemetry
 - An internal GoPhish simulation integrated with MAIL-SRV01 and validated through GoPhish, Sysmon, pfSense, and Splunk
 - An Apache telemetry pipeline from WEB-APP01 to Splunk Enterprise for controlled web-attack detection engineering
@@ -60,6 +60,7 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 - Deployed Cowrie in a dedicated DECEPTION zone and resolved a multi-layer Splunk ingestion issue involving filesystem access, temporary monitor configurations, and newline-delimited JSON event breaking; final validation returned 23 individual events with extracted fields.
 - Built an internal Postfix/Dovecot mail workflow and safe GoPhish campaign, then correlated the recipient's Microsoft Edge connection across Sysmon Event ID 3 and pfSense using the complete network tuple and time proximity.
 - Deployed ZEEK01 with separate management and passive-sensor interfaces, validated Zeek JSON ingestion and custom Notice telemetry, and built DET-018 around timing regularity, DNS context, and cached VirusTotal enrichment.
+- Validated the Suricata EVE JSON pipeline from pfSense through syslog-ng over TCP/5515 to Splunk, including field extraction, a controlled HTTP marker, and a controlled SID 2017061 alert test.
 - Identified a Sysmon `NetworkConnect` include-rule visibility gap and a pfSense prefix-dependent parsing failure, corrected both, and repeated the activity to validate final telemetry rather than treating missing events as missing activity.
 - Preserved root-cause findings for CIM mapping, Windows log placement, DHCP configuration, timestamps, and WAN stability in [Lab Engineering Notes](docs/lab-engineering-notes.md).
 
@@ -73,7 +74,7 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 | Splunk Universal Forwarder + Sysmon | Endpoint telemetry collection |
 | Splunk CIM Add-on | Authentication data-model normalization |
 | pfSense CE 2.8.1 | Routing, firewalling, DHCP, and syslog |
-| Suricata | IDS/IPS installed and integrated with pfSense; Splunk ingestion pending |
+| Suricata | IDS/IPS on pfSense with validated EVE JSON ingestion to Splunk over syslog-ng TCP/5515 |
 | Zeek 8.0.10 LTS / ZeekControl 2.6.0-31 | Passive network monitoring on ZEEK01 with JSON telemetry forwarded to Splunk; partial VMnet6 visibility |
 | Postfix | Internal SMTP transport, queueing, and local message delivery on MAIL-SRV01 |
 | Dovecot | IMAP/IMAPS access to Linux-local lab mailboxes |
@@ -172,7 +173,8 @@ Splunk Deployment Server (`10.0.20.100`) ──► DC01 Deployment Client
 
 pfSense firewall/system/DHCP ──► UDP 5514 syslog
 
-Suricata on pfSense ──► Splunk ingestion in progress / incomplete
+Suricata on pfSense ──► EVE JSON ──► syslog-ng ──► TCP/5515 ──► Splunk Enterprise
+                                                        `index=suricata`, `sourcetype=suricata:eve`
 
 ZEEK01 (`10.0.20.118` on `ens33` / VMnet3 management)
     ├─ `ens34` / VMnet6 ─► passive observation only (no IP or gateway)
@@ -211,7 +213,7 @@ SANDBOX01 (`10.0.90.10`) ── fake DNS/network requests ──► REMNUX01 (`1
 REMNUX01 ── dnsmasq / INetSim responses ──► SANDBOX01
 ```
 
-Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise host also acts as the Deployment Server, with DC01 documented as a Deployment Client. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. MAIL-SRV01 forwards Postfix and Dovecot mail telemetry to `index=mail`; the mailboxes are Linux-local and are not represented as Active Directory-integrated. PHISH-GOPHISH forwards GoPhish operational telemetry through Splunk Universal Forwarder to `10.0.20.100:9997`, using `index=gophish` and `sourcetype=gophish:log`. ZEEK01 forwards Zeek JSON telemetry to `index=zeek` over its VMnet3 management interface; its no-IP `ens34` interface observes VMnet6 passively. pfSense forwards firewall, system, and DHCP events for traffic that traverses pfSense. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline. VMnet9 has no Splunk connection; its fake-service traffic remains inside the isolated malware-analysis network.
+Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise host also acts as the Deployment Server, with DC01 documented as a Deployment Client. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. MAIL-SRV01 forwards Postfix and Dovecot mail telemetry to `index=mail`; the mailboxes are Linux-local and are not represented as Active Directory-integrated. PHISH-GOPHISH forwards GoPhish operational telemetry through Splunk Universal Forwarder to `10.0.20.100:9997`, using `index=gophish` and `sourcetype=gophish:log`. ZEEK01 forwards Zeek JSON telemetry to `index=zeek` over its VMnet3 management interface; its no-IP `ens34` interface observes VMnet6 passively. pfSense forwards firewall, system, and DHCP events for traffic that traverses pfSense. Suricata EVE JSON is read by syslog-ng and sent over TCP/5515 to `index=suricata` with `sourcetype=suricata:eve`; both HTTP telemetry and a controlled IDS signature alert were validated end to end. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. VMnet9 has no Splunk connection; its fake-service traffic remains inside the isolated malware-analysis network. See [Suricata to Splunk Ingestion Validation](docs/suricata-splunk-ingestion-validation.md).
 
 ## Detection Engineering
 
@@ -287,14 +289,14 @@ Network detection and response: [ZEEK01 deployment and telemetry](docs/zeek01-de
 - DET-009 is a deterministic lab detection for known C2 infrastructure; TCP/8888 alone is not treated as a universal Sliver indicator.
 - MAIL-SRV01 and PHISH-GOPHISH are internal lab services. The mailboxes are Linux-local, the GoPhish landing page uses internal HTTP, no credentials were collected, and DET-013 does not treat a browser connection alone as proof of phishing or compromise.
 - VMnet9 is operational as an isolated malware-analysis network with SANDBOX01 and REMNUX01; it has no gateway, routed-zone connection, Internet access, or Splunk integration.
-- Suricata is installed and integrated with pfSense, but Suricata alert ingestion into Splunk is incomplete.
+- Suricata EVE JSON ingestion from pfSense through syslog-ng and TCP/5515 to Splunk is active and validated. The controlled SID 2017061 test validated the alert pipeline and did not represent exploitation of a real SolusVM vulnerability.
 - ZEEK01 is operational with `ens33` management on VMnet3 and a no-IP `ens34` passive sensor on VMnet6. It sees outbound RED_NET traffic, but Internet return traffic is not consistently visible; promiscuous mode did not resolve the limitation. DET-018 therefore does not depend on `conn_state`, response bytes, or a complete TCP handshake.
 - Physical Home/IoT devices on `10.100.102.0/24` normally use the upstream Cellcom/Sagemcom router, not pfSense, as their gateway. Complete pfSense, Suricata, or Zeek visibility into their autonomous Internet traffic has not been demonstrated.
 - The pfSense WAN uses a private upstream address and a Wi-Fi bridge; the private address is not publicly routable, and the Wi-Fi uplink has shown stability issues.
 
 ## Roadmap
 
-- [ ] Ingest Suricata alerts into Splunk and validate the pipeline
+- [x] Ingest Suricata alerts into Splunk and validate the pipeline
 - [ ] Build Suricata-backed detection use cases
 - [ ] Resolve DET-006 CIM source-address mapping and assess a `tstats` migration
 - [ ] Add horizontal port-scan coverage

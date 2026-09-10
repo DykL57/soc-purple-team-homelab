@@ -177,7 +177,7 @@ The RID and URI values in the public evidence are intentionally redacted.
 - A tracked GET containing an RID does not by itself prove successful phishing, credential submission, compromise, malicious intent, or one unique human.
 - Synthetic validation requests can match DET-015.
 - Campaign and recipient metadata correlation is outside the current logic.
-- Suricata alert ingestion into Splunk remains pending and is not part of this pipeline.
+- Suricata alert ingestion into Splunk is now validated separately and is not part of this GoPhish telemetry pipeline.
 
 ## Related Documentation
 

@@ -68,7 +68,7 @@ PHISH-GOPHISH is an internal simulation platform. These relationships do not imp
 Windows / Linux --+
 Zeek -------------|
 pfSense ----------+--> TELEMETRY / LOGS & EVENTS --> Splunk Enterprise
-Suricata ---------|    (IN PROGRESS)
+Suricata ---------|    (ACTIVE / VALIDATED)
 Cowrie -----------+
 ```
 
