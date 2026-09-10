@@ -6,7 +6,7 @@
 
 ## Goal
 
-Move pfSense's WAN interface from VMware's internal NAT to an upstream-router DHCP lease, so pfSense could see and log inbound/outbound traffic and forward it to Splunk via syslog.
+Move pfSense's WAN interface from VMware's internal NAT to an upstream-router DHCP lease, so pfSense could see and log inbound/outbound traffic that actually traverses its interfaces and forward its own telemetry to Splunk via syslog. This scope does not include autonomous Home/IoT traffic that uses the upstream router rather than pfSense as its normal gateway.
 
 ## Starting state
 
@@ -100,6 +100,7 @@ This freed `10.0.20.100` exclusively for the Splunk server's static mapping. Sav
 - Splunk server relocated to the correct lab zone (`VMnet3`, LAN), with a permanent static DHCP mapping (`10.0.20.100`).
 - pfSense syslog (Firewall/System/DHCP events) successfully reaching Splunk on UDP 5514, confirmed via `tcpdump` and `index=pfsense` search results.
 - DHCP on the LAN interface is fully functional for all clients, with the actual root cause (misconfigured pool subnet) identified and corrected — not just worked around.
+- pfSense visibility applies to routed lab traffic that traverses pfSense. The result does not establish complete pfSense, Suricata, or Zeek visibility into physical Home/IoT devices on the upstream `10.100.102.0/24` network.
 
 ## Key lessons
 

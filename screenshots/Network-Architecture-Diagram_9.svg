@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1600" viewBox="0 0 1800 1200" role="img" aria-labelledby="title desc">
+  <title id="title">Home SOC and Purple Team Lab Architecture — 17 Systems</title>
+  <desc id="desc">Current segmented home SOC and Purple Team lab architecture. Seventeen systems include pfSense and sixteen hosts. ZEEK01 uses a VMnet3 management interface and a no-IP passive VMnet6 sensor interface with partial visibility.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="34%" r="82%"><stop offset="0" stop-color="#102642"/><stop offset=".6" stop-color="#071426"/><stop offset="1" stop-color="#020814"/></radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="soft-glow" x="-15%" y="-15%" width="130%" height="130%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <marker id="a-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#22d3ee"/></marker>
+    <marker id="a-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#45e36b"/></marker>
+    <marker id="a-yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#f6d32d"/></marker>
+    <marker id="a-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#ff8a24"/></marker>
+    <marker id="a-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#d66cff"/></marker>
+    <symbol id="server" viewBox="0 0 32 32"><rect x="6" y="2" width="20" height="28" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8h12M10 14h12M10 20h12" stroke="currentColor" stroke-width="2"/><circle cx="11" cy="25" r="1.5" fill="currentColor"/></symbol>
+    <symbol id="monitor" viewBox="0 0 32 32"><rect x="3" y="4" width="26" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 28h10M16 23v5" stroke="currentColor" stroke-width="2"/><path d="M7 8h18v11H7z" fill="currentColor" opacity=".18"/></symbol>
+    <symbol id="mail" viewBox="0 0 32 32"><rect x="3" y="6" width="26" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 9l11 9L27 9" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="globe" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 16h26M16 3c7 7 7 19 0 26M16 3c-7 7-7 19 0 26" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="terminal" viewBox="0 0 32 32"><rect x="3" y="5" width="26" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11l5 5-5 5M16 22h8" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="shield" viewBox="0 0 32 32"><path d="M16 3l11 5v8c0 7-4 11-11 14C9 27 5 23 5 16V8z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 14h10l-2 8h-6zM13 11h6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="cube" viewBox="0 0 32 32"><path d="M16 3l12 7v13l-12 7-12-7V10zM4 10l12 7 12-7M16 17v13" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="kali" viewBox="0 0 32 32"><path d="M3 20c8-13 18-15 26-7-8-2-13 1-17 6 6-2 12-1 17 4-10-4-18 0-26-3z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <style>
+      text{font-family:"Segoe UI",Arial,sans-serif;fill:#f8fafc}.title{font-size:41px;font-weight:800;letter-spacing:1.5px}.subtitle{font-size:22px;font-style:italic;fill:#22d3ee}.zone-title{font-size:17px;font-weight:750}.node-name{font-size:14px;font-weight:750}.ip{font-size:13px;fill:#dbeafe}.role{font-size:12px;fill:#aebed2}.small{font-size:12px}.flow{font-size:13px;font-weight:650}.zone{fill:#071426;fill-opacity:.7;stroke-width:2;filter:url(#soft-glow)}.node{fill:#101d31;stroke-width:1.5}.route{fill:none;stroke-width:2.3}.muted{fill:#9eb0c8}.icon{color:#57d9ff}.green{color:#a3e635}.red{color:#fb7185}.orange{color:#fbbf24}.purple{color:#d66cff}
+    </style>
+  </defs>
+  <rect width="1800" height="1200" fill="url(#bg)"/>
+
+  <text id="diagram-heading" class="title" x="900" y="54" text-anchor="middle">HOME SOC / PURPLE TEAM LAB ARCHITECTURE</text>
+  <text class="subtitle" x="900" y="88" text-anchor="middle">Current Network Zones, Systems, and Telemetry Flows (17 Systems)</text>
+
+  <!-- Internet, upstream and pfSense hierarchy -->
+  <g data-system="pfSense">
+    <use href="#globe" x="875" y="102" width="50" height="50" class="icon"/>
+    <text x="940" y="131" class="node-name">Internet</text>
+    <path d="M900 153v28" class="route" stroke="#22d3ee" marker-end="url(#a-cyan)"/>
+    <rect x="843" y="181" width="114" height="38" rx="7" fill="#0e1b2e" stroke="#dbeafe" stroke-width="2"/>
+    <path d="M856 198h88M867 181v-14M933 181v-14" stroke="#dbeafe" stroke-width="3"/><circle cx="918" cy="201" r="2.5" fill="#22d3ee"/><circle cx="929" cy="201" r="2.5" fill="#22d3ee"/><circle cx="940" cy="201" r="2.5" fill="#22d3ee"/>
+    <text x="975" y="194" class="node-name">Physical Upstream Router</text><text x="975" y="212" class="small muted">Cellcom / Sagemcom</text>
+    <path d="M900 220v24" class="route" stroke="#22d3ee" marker-end="url(#a-cyan)"/>
+    <rect x="835" y="245" width="130" height="49" rx="9" fill="#0e1b2e" stroke="#22d3ee" stroke-width="1.7"/>
+    <text x="900" y="266" text-anchor="middle" class="small">VMware Bridged WAN</text><text x="900" y="284" text-anchor="middle" class="small muted">VMnet0</text>
+    <path d="M900 295v22" class="route" stroke="#22d3ee" marker-end="url(#a-cyan)"/>
+    <rect x="842" y="319" width="116" height="48" rx="9" fill="#f8fafc" stroke="#22d3ee" stroke-width="2" filter="url(#glow)"/>
+    <text x="900" y="347" text-anchor="middle" style="font-size:25px;font-weight:800;fill:#0754c7">pfSense</text>
+  </g>
+
+  <!-- Physical home network: deliberately outside the lab path -->
+  <path d="M957 199H1280" class="route" stroke="#56a5ff" stroke-dasharray="10 8"/>
+  <rect x="1320" y="112" width="445" height="126" rx="12" fill="#071426" fill-opacity=".62" stroke="#82aaff" stroke-width="1.5" stroke-dasharray="9 6"/>
+  <text x="1340" y="139" class="zone-title" fill="#82aaff">HOME / IoT — 10.100.102.0/24</text>
+  <text x="1340" y="165" class="small">Gateway: Upstream Router</text>
+  <text x="1340" y="190" class="small muted">Outside normal pfSense lab routing</text>
+  <text x="1340" y="214" class="small muted">No confirmed full Zeek / Suricata visibility</text>
+
+  <!-- pfSense routed zone trunks -->
+  <path d="M900 368v29H245v26M900 397H610v26M900 368v29h1135v26M900 397h410v26" class="route" stroke="#22d3ee" marker-end="url(#a-cyan)"/>
+
+  <!-- VMnet3 -->
+  <g id="vmnet3">
+    <rect x="18" y="425" width="650" height="345" rx="16" class="zone" stroke="#1ea7ff"/>
+    <text x="343" y="452" class="zone-title" text-anchor="middle" fill="#38bdf8">VMnet3 — INFRASTRUCTURE / SERVERS / SIEM — 10.0.20.0/24</text>
+    <g data-system="DC01"><rect x="38" y="478" width="135" height="150" rx="11" class="node" stroke="#38bdf8"/><use href="#server" x="85" y="491" width="38" height="38" class="icon"/><text x="105" y="548" text-anchor="middle" class="node-name">DC01</text><text x="105" y="570" text-anchor="middle" class="ip">10.0.20.10</text><text x="105" y="596" text-anchor="middle" class="role">AD · DNS</text><text x="105" y="614" text-anchor="middle" class="role">Deployment Client</text></g>
+    <g data-system="linux-srv01"><rect x="184" y="478" width="135" height="150" rx="11" class="node" stroke="#38bdf8"/><use href="#server" x="232" y="491" width="38" height="38" class="green"/><text x="252" y="548" text-anchor="middle" class="node-name">linux-srv01</text><text x="252" y="570" text-anchor="middle" class="ip">10.0.20.41</text><text x="252" y="596" text-anchor="middle" class="role">Linux services</text><text x="252" y="614" text-anchor="middle" class="role">Syslog · Splunk UF</text></g>
+    <g data-system="MAIL-SRV01"><rect x="330" y="478" width="135" height="150" rx="11" class="node" stroke="#38bdf8"/><use href="#mail" x="378" y="491" width="38" height="38" class="icon"/><text x="398" y="548" text-anchor="middle" class="node-name">MAIL-SRV01</text><text x="398" y="570" text-anchor="middle" class="ip">10.0.20.30</text><text x="398" y="594" text-anchor="middle" class="role">Postfix SMTP</text><text x="398" y="612" text-anchor="middle" class="role">Dovecot IMAP/IMAPS</text></g>
+    <g data-system="ZEEK01"><rect x="476" y="478" width="172" height="150" rx="11" class="node" stroke="#d66cff"/><use href="#server" x="543" y="486" width="38" height="38" class="purple"/><text x="562" y="538" text-anchor="middle" class="node-name">ZEEK01</text><text x="562" y="558" text-anchor="middle" class="role">Zeek NDR Sensor</text><text x="562" y="582" text-anchor="middle" class="ip">ens33 → VMnet3</text><text x="562" y="603" text-anchor="middle" class="ip">10.0.20.118</text><text x="562" y="621" text-anchor="middle" class="role">Management</text></g>
+  </g>
+
+  <!-- VMnet4 -->
+  <g id="vmnet4"><rect x="685" y="425" width="310" height="345" rx="16" class="zone" stroke="#22d3ee"/><text x="840" y="452" class="zone-title" text-anchor="middle" fill="#22d3ee">VMnet4 — WINDOWS CLIENTS</text><text x="840" y="474" class="ip" text-anchor="middle">10.0.30.0/24</text>
+    <g data-system="WIN-CL01"><rect x="707" y="505" width="128" height="166" rx="11" class="node" stroke="#22d3ee"/><use href="#monitor" x="753" y="519" width="38" height="38" class="icon"/><text x="771" y="576" class="node-name" text-anchor="middle">WIN-CL01</text><text x="771" y="598" class="ip" text-anchor="middle">10.0.30.100</text><text x="771" y="625" class="role" text-anchor="middle">Thunderbird · Edge</text><text x="771" y="645" class="role" text-anchor="middle">Sysmon · Splunk UF</text></g>
+    <g data-system="WIN-CL02"><rect x="846" y="505" width="128" height="166" rx="11" class="node" stroke="#22d3ee"/><use href="#monitor" x="892" y="519" width="38" height="38" class="icon"/><text x="910" y="576" class="node-name" text-anchor="middle">WIN-CL02</text><text x="910" y="598" class="ip" text-anchor="middle">10.0.30.101</text><text x="910" y="625" class="role" text-anchor="middle">Windows client</text><text x="910" y="645" class="role" text-anchor="middle">Sysmon · Splunk UF</text></g>
+  </g>
+
+  <!-- VMnet6 -->
+  <g id="vmnet6"><rect x="1012" y="425" width="575" height="345" rx="16" class="zone" stroke="#ff394f"/><text x="1300" y="452" class="zone-title" text-anchor="middle" fill="#ff4458">VMnet6 — RED TEAM / TARGETS / SIMULATION</text><text x="1300" y="474" class="ip" text-anchor="middle">10.0.50.0/24</text>
+    <g data-system="KALI-OPS01"><rect x="1034" y="496" width="164" height="103" rx="10" class="node" stroke="#ff5263"/><use href="#kali" x="1048" y="508" width="34" height="34" class="red"/><text x="1116" y="527" class="node-name" text-anchor="middle">KALI-OPS01</text><text x="1116" y="549" class="ip" text-anchor="middle">10.0.50.60</text><text x="1116" y="577" class="role" text-anchor="middle">Security testing</text></g>
+    <g data-system="WIN-REDTEAM01"><rect x="1209" y="496" width="164" height="103" rx="10" class="node" stroke="#ff5263"/><use href="#monitor" x="1223" y="508" width="34" height="34" class="red"/><text x="1291" y="527" class="node-name" text-anchor="middle">WIN-REDTEAM01</text><text x="1291" y="549" class="ip" text-anchor="middle">10.0.50.50</text><text x="1291" y="577" class="role" text-anchor="middle">Red Team endpoint</text></g>
+    <g data-system="FILE-SRV01"><rect x="1384" y="496" width="181" height="103" rx="10" class="node" stroke="#ff5263"/><use href="#server" x="1398" y="508" width="34" height="34" class="red"/><text x="1475" y="527" class="node-name" text-anchor="middle">FILE-SRV01</text><text x="1475" y="549" class="ip" text-anchor="middle">10.0.50.105</text><text x="1475" y="577" class="role" text-anchor="middle">SMB target server</text></g>
+    <g data-system="WEB-APP01"><rect x="1034" y="616" width="164" height="116" rx="10" class="node" stroke="#ff5263"/><use href="#globe" x="1048" y="629" width="34" height="34" class="red"/><text x="1116" y="648" class="node-name" text-anchor="middle">WEB-APP01</text><text x="1116" y="670" class="ip" text-anchor="middle">10.0.50.102</text><text x="1116" y="696" class="role" text-anchor="middle">Web validation target</text></g>
+    <g data-system="C2-SLIVER01"><rect x="1209" y="616" width="164" height="116" rx="10" class="node" stroke="#ff5263"/><use href="#terminal" x="1223" y="629" width="34" height="34" class="red"/><text x="1291" y="648" class="node-name" text-anchor="middle">C2-SLIVER01</text><text x="1291" y="670" class="ip" text-anchor="middle">10.0.50.61</text><text x="1291" y="696" class="role" text-anchor="middle">Authorized Sliver C2</text></g>
+    <g data-system="PHISH-GOPHISH"><rect x="1384" y="616" width="181" height="116" rx="10" class="node" stroke="#ff9d24"/><use href="#mail" x="1398" y="629" width="34" height="34" class="orange"/><text x="1475" y="648" class="node-name" text-anchor="middle">PHISH-GOPHISH</text><text x="1475" y="670" class="ip" text-anchor="middle">10.0.50.70</text><text x="1475" y="694" class="role" text-anchor="middle">Internal simulation</text><text x="1475" y="712" class="role" text-anchor="middle">No credential collection</text></g>
+  </g>
+
+  <!-- VMnet7 -->
+  <g id="vmnet7"><rect x="1604" y="425" width="178" height="345" rx="16" class="zone" stroke="#ff9d00"/><text x="1693" y="449" style="font-size:14px;font-weight:750;fill:#ff9d00" text-anchor="middle">VMnet7 — DECEPTION</text><text x="1693" y="474" class="ip" text-anchor="middle">10.0.60.0/24</text>
+    <g data-system="LINUX-HONEYPOT01"><rect x="1623" y="514" width="140" height="178" rx="11" class="node" stroke="#ffae00"/><use href="#shield" x="1673" y="532" width="40" height="40" class="orange"/><text x="1693" y="594" class="node-name" text-anchor="middle">LINUX-HONEYPOT01</text><text x="1693" y="616" class="ip" text-anchor="middle">10.0.60.10</text><text x="1693" y="645" class="role" text-anchor="middle">Cowrie SSH/Telnet</text><text x="1693" y="665" class="role" text-anchor="middle">Splunk UF</text></g>
+  </g>
+
+  <!-- Passive sensor attachment: ZEEK01 is not duplicated -->
+  <path d="M562 628v92h173" class="route" stroke="#d66cff" stroke-dasharray="8 6"/>
+  <path d="M1070 720h-58" class="route" stroke="#d66cff" stroke-dasharray="8 6" marker-end="url(#a-purple)"/>
+  <rect x="735" y="688" width="335" height="64" rx="9" fill="#120d28" stroke="#d66cff" stroke-width="1.5" stroke-dasharray="7 5" filter="url(#soft-glow)"/>
+  <text x="902" y="706" class="flow" text-anchor="middle" fill="#e879f9">ens34 → VMnet6</text>
+  <text x="902" y="725" class="small" text-anchor="middle">Passive Sensor / No IP</text>
+  <text x="902" y="744" class="small muted" text-anchor="middle">Partial visibility · Internet return traffic not consistently visible</text>
+
+  <!-- Explicit mail / phishing relationships -->
+  <path d="M1475 732v57H398v-161" class="route thin" stroke="#ff8a24" marker-end="url(#a-orange)"/>
+  <rect x="1075" y="777" width="300" height="23" rx="6" fill="#071426"/><text x="1225" y="793" class="small" text-anchor="middle" fill="#ffae42">PHISH-GOPHISH → SMTP → MAIL-SRV01</text>
+  <path d="M398 628v187h373V671" class="route thin" stroke="#22d3ee" marker-end="url(#a-cyan)"/>
+  <rect x="435" y="803" width="330" height="23" rx="6" fill="#071426"/><text x="600" y="819" class="small" text-anchor="middle" fill="#67e8f9">MAIL-SRV01 → IMAP/IMAPS → WIN-CL01 / Thunderbird</text>
+
+  <!-- Central Splunk system, shown exactly once -->
+  <g data-system="Splunk-Enterprise">
+    <rect x="650" y="870" width="500" height="145" rx="16" fill="#0b201d" stroke="#8be000" stroke-width="2.6" filter="url(#glow)"/>
+    <text x="900" y="898" text-anchor="middle" class="zone-title" fill="#8be000">VMnet3 · 10.0.20.100</text>
+    <text x="900" y="947" text-anchor="middle" style="font-size:43px;font-weight:800">splunk<tspan fill="#8be000">&gt;</tspan></text>
+    <text x="900" y="975" text-anchor="middle" class="node-name">Splunk Enterprise · Rocky Linux 64-bit</text>
+    <text x="900" y="998" text-anchor="middle" class="role">SIEM · Search · Correlation · Deployment Server</text>
+  </g>
+
+  <!-- Telemetry flows -->
+  <path d="M105 628v226H635" class="route" stroke="#22d3ee" stroke-dasharray="8 6" marker-end="url(#a-cyan)"/><text x="242" y="846" class="flow" fill="#38bdf8">Management / Deployment</text>
+  <path d="M252 628v164h445v78" class="route" stroke="#45e36b" marker-end="url(#a-green)"/>
+  <path d="M398 628v151h330v91" class="route" stroke="#45e36b" marker-end="url(#a-green)"/>
+  <path d="M771 671v108h-12v91" class="route" stroke="#45e36b" marker-end="url(#a-green)"/>
+  <path d="M910 671v108h-120v91" class="route" stroke="#45e36b" marker-end="url(#a-green)"/>
+  <rect x="610" y="805" width="204" height="24" rx="6" fill="#071426"/><text x="712" y="822" class="flow" text-anchor="middle" fill="#70ef89">Windows / Linux → Splunk</text>
+  <path d="M562 752v78h278v40" class="route" stroke="#d66cff" marker-end="url(#a-purple)"/><rect x="520" y="755" width="330" height="30" rx="6" fill="#071426"/><text x="685" y="768" class="flow" text-anchor="middle" fill="#e879f9">Zeek Logs → Splunk UF → Splunk Enterprise</text><text x="685" y="782" class="small muted" text-anchor="middle">index=zeek</text>
+  <path d="M900 368h170v452H900v50" class="route" stroke="#f6d32d" marker-end="url(#a-yellow)"/><rect x="917" y="793" width="145" height="24" rx="6" fill="#071426"/><text x="989" y="810" class="flow" text-anchor="middle" fill="#f6d32d">pfSense → Splunk</text>
+  <path d="M1018 770v67H965v33" class="route" stroke="#f6d32d" stroke-dasharray="9 7" marker-end="url(#a-yellow)"/><rect x="980" y="837" width="238" height="22" rx="6" fill="#071426"/><text x="1099" y="853" class="small" text-anchor="middle" fill="#f6d32d">Suricata → Splunk · IN PROGRESS</text>
+  <path d="M1693 692v174h-598v4" class="route" stroke="#ff8a24" marker-end="url(#a-orange)"/><rect x="1480" y="842" width="205" height="22" rx="6" fill="#071426"/><text x="1582" y="858" class="small" text-anchor="middle" fill="#ff9d24">Cowrie → UF → Splunk</text>
+
+  <!-- VMnet9 isolated malware analysis -->
+  <g id="vmnet9"><rect x="430" y="1038" width="940" height="142" rx="15" fill="#110b27" fill-opacity=".77" stroke="#d66cff" stroke-width="2" stroke-dasharray="10 7"/><text x="900" y="1064" text-anchor="middle" class="zone-title" fill="#e879f9">VMnet9 — ISOLATED MALWARE ANALYSIS — 10.0.90.0/24</text><text x="900" y="1086" text-anchor="middle" class="flow" fill="#f0abfc">NO GATEWAY · NO pfSense · NO INTERNET · NO SPLUNK</text>
+    <g data-system="SANDBOX01"><rect x="520" y="1100" width="270" height="65" rx="10" class="node" stroke="#d66cff"/><use href="#cube" x="538" y="1116" width="34" height="34" class="purple"/><text x="655" y="1125" class="node-name" text-anchor="middle">SANDBOX01 · 10.0.90.10</text><text x="655" y="1147" class="role" text-anchor="middle">Windows detonation target</text></g>
+    <path d="M790 1132H1010" class="route" stroke="#d66cff" marker-start="url(#a-purple)" marker-end="url(#a-purple)"/><text x="900" y="1123" text-anchor="middle" class="small">Fake DNS / Network Services</text>
+    <g data-system="REMNUX01"><rect x="1010" y="1100" width="270" height="65" rx="10" class="node" stroke="#d66cff"/><use href="#terminal" x="1028" y="1116" width="34" height="34" class="purple"/><text x="1145" y="1125" class="node-name" text-anchor="middle">REMNUX01 · 10.0.90.20</text><text x="1145" y="1147" class="role" text-anchor="middle">dnsmasq · INetSim</text></g>
+  </g>
+
+  <!-- Legend and totals -->
+  <rect x="18" y="822" width="375" height="198" rx="12" fill="#071426" stroke="#60758f"/>
+  <text x="38" y="850" class="zone-title">TELEMETRY FLOWS LEGEND</text>
+  <path d="M38 874h48" class="route" stroke="#45e36b" marker-end="url(#a-green)"/><text x="99" y="879" class="small">Windows / Sysmon and Linux logs → Splunk</text>
+  <path d="M38 900h48" class="route" stroke="#f6d32d" marker-end="url(#a-yellow)"/><text x="99" y="905" class="small">pfSense syslog → Splunk</text>
+  <path d="M38 926h48" class="route" stroke="#f6d32d" stroke-dasharray="8 6" marker-end="url(#a-yellow)"/><text x="99" y="931" class="small">Suricata → Splunk (IN PROGRESS)</text>
+  <path d="M38 952h48" class="route" stroke="#d66cff" marker-end="url(#a-purple)"/><text x="99" y="957" class="small">Zeek JSON → UF → Splunk</text>
+  <path d="M38 978h48" class="route" stroke="#ff8a24" marker-end="url(#a-orange)"/><text x="99" y="983" class="small">Cowrie → UF → Splunk</text>
+  <path d="M38 1004h48" class="route" stroke="#22d3ee" stroke-dasharray="8 6" marker-end="url(#a-cyan)"/><text x="99" y="1009" class="small">Management / Deployment</text>
+
+  <rect x="1410" y="878" width="372" height="142" rx="12" fill="#071426" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="1432" y="907" class="zone-title">17 SYSTEMS</text>
+  <text x="1432" y="932" class="small">pfSense + 16 hosts / VMs</text>
+  <text x="1432" y="965" class="zone-title" fill="#f6d32d">16 DETECTIONS</text>
+  <text x="1432" y="990" class="small">DET-001–DET-015 + DET-018</text>
+</svg>
