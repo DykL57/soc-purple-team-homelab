@@ -19,11 +19,11 @@ This repository documents a segmented, enterprise-style home lab used to practic
 
 ## Architecture
 
-![SOC and Purple Team home lab architecture](screenshots/Network-Architecture-Diagram_8.png)
+![SOC and Purple Team home lab architecture](screenshots/Network-Architecture-Diagram_9.png)
 
 pfSense is the only routing path between isolated VMware host-only networks. Its WAN receives a private RFC1918 address from the upstream router; the upstream router, not pfSense's WAN address, provides Internet-facing NAT.
 
-The current architecture diagram and the inventory and network tables below reflect the 16-system lab, including MAIL-SRV01 and PHISH-GOPHISH.
+The current architecture diagram and the inventory and network tables below reflect the 17-system lab: pfSense plus 16 hosts/VMs, including the dual-interface ZEEK01 passive network sensor.
 
 ## What I Built
 
@@ -34,6 +34,7 @@ The current architecture diagram and the inventory and network tables below refl
 - A Linux-based internal mail stack using Postfix, Dovecot, Thunderbird, internal TLS, and Splunk mail telemetry
 - An internal GoPhish simulation integrated with MAIL-SRV01 and validated through GoPhish, Sysmon, pfSense, and Splunk
 - An Apache telemetry pipeline from WEB-APP01 to Splunk Enterprise for controlled web-attack detection engineering
+- A dual-interface Zeek NDR sensor that forwards JSON telemetry from passive VMnet6 observation to Splunk Enterprise through a management-only VMnet3 path
 - An isolated malware-analysis network with local fake DNS and Internet-service simulation
 - 16 documented Splunk detections—DET-001 through DET-015 and DET-018—with attack or traffic-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
@@ -46,6 +47,7 @@ The current architecture diagram and the inventory and network tables below refl
 - Investigated stale GeoLite2 results, confirmed the observed hits as false positives, and added VirusTotal enrichment to the existing search workflow.
 - Deployed Cowrie in a dedicated DECEPTION zone and resolved a multi-layer Splunk ingestion issue involving filesystem access, temporary monitor configurations, and newline-delimited JSON event breaking; final validation returned 23 individual events with extracted fields.
 - Built an internal Postfix/Dovecot mail workflow and safe GoPhish campaign, then correlated the recipient's Microsoft Edge connection across Sysmon Event ID 3 and pfSense using the complete network tuple and time proximity.
+- Deployed ZEEK01 with separate management and passive-sensor interfaces, validated Zeek JSON ingestion and custom Notice telemetry, and built DET-018 around timing regularity, DNS context, and cached VirusTotal enrichment.
 - Identified a Sysmon `NetworkConnect` include-rule visibility gap and a pfSense prefix-dependent parsing failure, corrected both, and repeated the activity to validate final telemetry rather than treating missing events as missing activity.
 - Preserved root-cause findings for CIM mapping, Windows log placement, DHCP configuration, timestamps, and WAN stability in [Lab Engineering Notes](docs/lab-engineering-notes.md).
 
@@ -60,6 +62,7 @@ The current architecture diagram and the inventory and network tables below refl
 | Splunk CIM Add-on | Authentication data-model normalization |
 | pfSense CE 2.8.1 | Routing, firewalling, DHCP, and syslog |
 | Suricata | IDS/IPS installed and integrated with pfSense; Splunk ingestion pending |
+| Zeek 8.0.10 LTS / ZeekControl 2.6.0-31 | Passive network monitoring on ZEEK01 with JSON telemetry forwarded to Splunk; partial VMnet6 visibility |
 | Postfix | Internal SMTP transport, queueing, and local message delivery on MAIL-SRV01 |
 | Dovecot | IMAP/IMAPS access to Linux-local lab mailboxes |
 | Thunderbird | Mail client used by the controlled recipient on WIN-CL01 |
@@ -76,9 +79,9 @@ The current architecture diagram and the inventory and network tables below refl
 | Network / zone | Subnet / gateway | pfSense connection | Connected systems | Purpose |
 |---|---|---|---|---|
 | VMnet0 | WAN / upstream | pfSense WAN | pfSense | Upstream connectivity |
-| VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01, MAIL-SRV01 | Servers, infrastructure, mail, and SIEM |
+| VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01, MAIL-SRV01, ZEEK01 (`ens33`) | Servers, infrastructure, mail, SIEM, and ZEEK01 management |
 | VMnet4 | `10.0.30.0/24` | pfSense | WIN-CL01, WIN-CL02 | Windows client network |
-| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01, PHISH-GOPHISH | RED_NET, simulation infrastructure, and security testing |
+| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01, PHISH-GOPHISH; ZEEK01 `ens34` observes passively with no IP | RED_NET, simulation infrastructure, security testing, and partial passive monitoring |
 | VMnet7 | `10.0.60.0/24`; gateway `10.0.60.1` | pfSense DECEPTION | LINUX-HONEYPOT01 | DECEPTION zone for isolated honeypot services |
 | VMnet9 | `10.0.90.0/24`; no gateway | None | SANDBOX01, REMNUX01 | Isolated malware analysis, detonation, and simulated network services |
 
@@ -102,6 +105,7 @@ The current architecture diagram and the inventory and network tables below refl
 | 14 | SANDBOX01 | Windows | Isolated malware-analysis workstation / detonation and behavioral-analysis target | VMnet9 | `10.0.90.0/24` | `10.0.90.10` | Malware Analysis Sandbox | Active |
 | 15 | MAIL-SRV01 | Ubuntu Server | Postfix SMTP, Dovecot IMAP/IMAPS, Linux-local mailboxes, TLS, Splunk UF | VMnet3 | `10.0.20.0/24` | `10.0.20.30` | Internal mail / telemetry | Active |
 | 16 | PHISH-GOPHISH | Ubuntu Server | GoPhish internal phishing-simulation platform | VMnet6 | `10.0.50.0/24` | `10.0.50.70` | Purple Team simulation infrastructure | Active |
+| 17 | ZEEK01 | Ubuntu 26.04 LTS | Zeek NDR sensor / Splunk Universal Forwarder | VMnet3 (`ens33`), VMnet6 (`ens34`) | Management: `10.0.20.0/24`; passive sensor: VMnet6 | `10.0.20.118` on `ens33`; no IP on `ens34` | Management / partial passive RED_NET visibility | Active |
 
 ### Network Segmentation Summary
 
@@ -111,7 +115,8 @@ VMnet3 / 10.0.20.0/24
     ├── Splunk Enterprise
     ├── DC01
     ├── linux-srv01
-    └── MAIL-SRV01
+    ├── MAIL-SRV01
+    └── ZEEK01 ens33 (management)
 
 VMnet4 / 10.0.30.0/24
 └── Windows Clients
@@ -125,7 +130,8 @@ VMnet6 / 10.0.50.0/24
     ├── FILE-SRV01
     ├── WEB-APP01
     ├── C2-SLIVER01
-    └── PHISH-GOPHISH
+    ├── PHISH-GOPHISH
+    └── ZEEK01 ens34 (passive sensor; no IP or gateway)
 
 VMnet7 / 10.0.60.0/24
 └── Honeypot / Deception
@@ -156,6 +162,14 @@ pfSense firewall/system/DHCP ──► UDP 5514 syslog
 
 Suricata on pfSense ──► Splunk ingestion in progress / incomplete
 
+ZEEK01 (`10.0.20.118` on `ens33` / VMnet3 management)
+    ├─ `ens34` / VMnet6 ─► passive observation only (no IP or gateway)
+    └─ Zeek JSON logs ─► Splunk Universal Forwarder 10.4.3
+                              └─ TCP/9997 ─► Splunk Enterprise (`index=zeek`)
+                                  ├─ `zeek:conn:json`   ├─ `zeek:dns:json`
+                                  ├─ `zeek:http:json`   ├─ `zeek:ssl:json`
+                                  ├─ `zeek:files:json`  └─ `zeek:notice:json`
+
 MAIL-SRV01 (`10.0.20.30`)
     ├─ Postfix + Dovecot `mail.log` ─► Splunk Universal Forwarder
     │                                      └─► Splunk Enterprise (`index=mail`)
@@ -185,7 +199,7 @@ SANDBOX01 (`10.0.90.10`) ── fake DNS/network requests ──► REMNUX01 (`1
 REMNUX01 ── dnsmasq / INetSim responses ──► SANDBOX01
 ```
 
-Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise host also acts as the Deployment Server, with DC01 documented as a Deployment Client. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. MAIL-SRV01 forwards Postfix and Dovecot mail telemetry to `index=mail`; the mailboxes are Linux-local and are not represented as Active Directory-integrated. PHISH-GOPHISH forwards GoPhish operational telemetry through Splunk Universal Forwarder to `10.0.20.100:9997`, using `index=gophish` and `sourcetype=gophish:log`. pfSense forwards firewall, system, and DHCP events for network visibility. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline. VMnet9 has no Splunk connection; its fake-service traffic remains inside the isolated malware-analysis network.
+Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise host also acts as the Deployment Server, with DC01 documented as a Deployment Client. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. MAIL-SRV01 forwards Postfix and Dovecot mail telemetry to `index=mail`; the mailboxes are Linux-local and are not represented as Active Directory-integrated. PHISH-GOPHISH forwards GoPhish operational telemetry through Splunk Universal Forwarder to `10.0.20.100:9997`, using `index=gophish` and `sourcetype=gophish:log`. ZEEK01 forwards Zeek JSON telemetry to `index=zeek` over its VMnet3 management interface; its no-IP `ens34` interface observes VMnet6 passively. pfSense forwards firewall, system, and DHCP events for traffic that traverses pfSense. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. Suricata operates on pfSense, but its alerts are not yet part of the Splunk pipeline. VMnet9 has no Splunk connection; its fake-service traffic remains inside the isolated malware-analysis network.
 
 ## Detection Engineering
 
@@ -230,6 +244,7 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 │   ├── mail-srv01-gophish-phishing-simulation.md
 │   ├── malware-analysis-sandbox.md
 │   ├── phish-gophish-deployment-and-telemetry.md
+│   ├── zeek01-deployment-and-telemetry.md
 │   ├── sliver-c2-deployment.md
 │   ├── splunk_index_precedence_EN.md
 │   ├── troubleshooting-cowrie-splunk-ingestion.md
@@ -248,6 +263,8 @@ Internal phishing simulation: [MAIL-SRV01 and GoPhish project](docs/mail-srv01-g
 
 Web application telemetry: [WEB-APP01 deployment and Apache telemetry](docs/web-app01-deployment-and-telemetry.md) · [DET-014 — Cross-Site Scripting (XSS) Attempt](detections/splunk/DET-014-cross-site-scripting-xss-attempt.md)
 
+Network detection and response: [ZEEK01 deployment and telemetry](docs/zeek01-deployment-and-telemetry.md) · [DET-018 — Beaconing / C2 Communication](detections/splunk/DET-018-beaconing-c2-communication.md)
+
 ## Current Status / Known Limitations
 
 - 16 detections are documented—DET-001 through DET-015 and DET-018; none are claimed to be production-ready.
@@ -259,6 +276,8 @@ Web application telemetry: [WEB-APP01 deployment and Apache telemetry](docs/web-
 - MAIL-SRV01 and PHISH-GOPHISH are internal lab services. The mailboxes are Linux-local, the GoPhish landing page uses internal HTTP, no credentials were collected, and DET-013 does not treat a browser connection alone as proof of phishing or compromise.
 - VMnet9 is operational as an isolated malware-analysis network with SANDBOX01 and REMNUX01; it has no gateway, routed-zone connection, Internet access, or Splunk integration.
 - Suricata is installed and integrated with pfSense, but Suricata alert ingestion into Splunk is incomplete.
+- ZEEK01 is operational with `ens33` management on VMnet3 and a no-IP `ens34` passive sensor on VMnet6. It sees outbound RED_NET traffic, but Internet return traffic is not consistently visible; promiscuous mode did not resolve the limitation. DET-018 therefore does not depend on `conn_state`, response bytes, or a complete TCP handshake.
+- Physical Home/IoT devices on `10.100.102.0/24` normally use the upstream Cellcom/Sagemcom router, not pfSense, as their gateway. Complete pfSense, Suricata, or Zeek visibility into their autonomous Internet traffic has not been demonstrated.
 - The pfSense WAN uses a private upstream address and a Wi-Fi bridge; the private address is not publicly routable, and the Wi-Fi uplink has shown stability issues.
 
 ## Roadmap
@@ -268,7 +287,8 @@ Web application telemetry: [WEB-APP01 deployment and Apache telemetry](docs/web-
 - [ ] Resolve DET-006 CIM source-address mapping and assess a `tstats` migration
 - [ ] Add horizontal port-scan coverage
 - [ ] Replace the Wi-Fi WAN bridge with a dedicated wired adapter
-- [ ] Add persistent caching for VirusTotal enrichment
+- [ ] Automate and monitor VirusTotal cache refresh/age
+- [ ] Improve ZEEK01 VMnet6 visibility using a validated mirroring/TAP design
 - [ ] Expand detections into persistence, command-and-control, and exfiltration scenarios
 - [ ] Add malware-analysis tooling and evaluate a controlled evidence-export or Splunk-integration workflow without routing VMnet9
 

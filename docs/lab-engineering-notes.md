@@ -8,6 +8,8 @@ pfSense forwards firewall, system, and DHCP events to Splunk over UDP 5514. Fire
 
 Suricata is installed and integrated with pfSense. Suricata alert ingestion into Splunk is not complete and no Suricata-backed detection is represented as validated.
 
+ZEEK01 is a dual-interface passive sensor. Its `ens33` management interface uses VMnet3 at `10.0.20.118`, while `ens34` has no IP address or gateway and observes VMnet6 passively. Zeek JSON is forwarded through Splunk Universal Forwarder to `index=zeek`. The VMware observation point provides partial outbound visibility; Internet return traffic is not consistently visible, even with promiscuous mode enabled.
+
 ## CIM and `tstats`
 
 DET-001 and DET-002 use the CIM Authentication data model. The `Splunk_SA_CIM` add-on was installed, relevant index macros were constrained to `index=wineventlog`, and results were checked against lab authentication events.
@@ -44,7 +46,11 @@ Editing a data model constraint did not resolve the missing explicit-index warni
 
 ### Bridged WAN and DHCP
 
-Moving pfSense WAN from VMware NAT to bridged mode removed an expected route and exposed a DHCP pool configured for `192.168.1.x` on a `10.0.20.0/24` interface. The pool was corrected to `10.0.20.101–200`, and SPLUNK01 received a static mapping at `10.0.20.100`. See [the full DHCP investigation](troubleshooting-pfsense-bridged-wan-dhcp-conflict.md).
+Moving pfSense WAN from VMware NAT to bridged mode removed an expected route and exposed a DHCP pool configured for `192.168.1.x` on a `10.0.20.0/24` interface. The pool was corrected to `10.0.20.101–200`, and the single Rocky Linux 64-bit Splunk Enterprise system received a static mapping at `10.0.20.100`. See [the full DHCP investigation](troubleshooting-pfsense-bridged-wan-dhcp-conflict.md).
+
+### ZEEK01 passive-visibility boundary
+
+ZEEK01 is not inline and is not a routing or enforcement device. Its passive `ens34` interface sees outbound RED_NET traffic on VMnet6, but Internet return traffic is not consistently visible. DET-018 was therefore designed without a dependency on `conn_state`, response bytes, or a complete TCP handshake. A validated mirroring or TAP design remains the preferred path for improving coverage.
 
 ### Splunk configuration precedence
 
