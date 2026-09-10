@@ -1,0 +1,12 @@
+
+[splunk@localhost ~]$ cat /opt/splunk/etc/apps/zeek_lab/lookups/vt_ip_reputation.csv
+dest_ip,vt_malicious,vt_suspicious,vt_harmless,vt_undetected,vt_verdict,asn,owner,country,last_update
+74.178.232.29,0,0,55,34,BENIGN,8075,Microsoft Corporation,NL,2026-09-10
+135.233.95.144,0,0,54,35,BENIGN,8075,Microsoft Corporation,US,2026-09-10
+23.46.165.164,0,0,55,34,BENIGN,1680,Cellcom Fixed Line Communication L.P,IL,2026-09-10
+135.232.92.137,0,0,52,37,BENIGN,8075,Microsoft Corporation,US,2026-09-10
+40.84.85.40,0,0,51,38,BENIGN,8075,Microsoft Corporation,US,2026-09-10
+48.211.4.16,0,0,52,37,BENIGN,8075,Microsoft Corporation,US,2026-09-10
+85.210.193.152,0,0,53,36,BENIGN,8075,Microsoft Corporation,GB,2026-09-10
+57.154.63.210,0,0,52,37,BENIGN,8075,Microsoft Corporation,US,2026-09-10
+[splunk@localhost ~]$
