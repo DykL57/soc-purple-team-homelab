@@ -48,12 +48,12 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 - An Apache telemetry pipeline from WEB-APP01 to Splunk Enterprise for controlled web-attack detection engineering
 - A dual-interface Zeek NDR sensor that forwards JSON telemetry from passive VMnet6 observation to Splunk Enterprise through a management-only VMnet3 path
 - An isolated malware-analysis network with local fake DNS and Internet-service simulation
-- 18 documented Splunk detections—DET-001 through DET-018—with attack or traffic-based validation evidence
+- 19 documented Splunk detections—DET-001 through DET-019—with attack or traffic-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
 
 ## Key Project Highlights
 
-- Documented 18 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, sensitive SMB-share writes, PowerShell download activity, phishing-simulation infrastructure, tracked GoPhish link interaction, XSS-like HTTP requests, path traversal / LFI-like requests, DNS-query periodicity, and Zeek-based beaconing analysis.
+- Documented 19 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, sensitive SMB-share writes, PowerShell download activity, phishing-simulation infrastructure, tracked GoPhish link interaction, XSS-like HTTP requests, path traversal / LFI-like requests, DNS-query periodicity, Zeek-based beaconing analysis, and cross-sensor SMB authentication correlation.
 - Identified 759 distinct destination ports touched in one minute during controlled vertical-scan validation.
 - Captured 2,651 failed SMB logons against a local Administrator account and documented the Windows RID 500 lockout limitation.
 - Investigated stale GeoLite2 results, confirmed the observed hits as false positives, and added VirusTotal enrichment to the existing search workflow.
@@ -237,6 +237,7 @@ Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise h
 | [DET-016](detections/splunk/DET-016-path-traversal-lfi-attempt.md) | Path Traversal / LFI Attempt | Apache HTTP access logs (`linux_web`, `apache:access`) | T1190 / Scenario-dependent | Validated / Lab-specific |
 | [DET-017](detections/splunk/DET-017-suspicious-dns-beaconing.md) | Suspicious DNS Beaconing | Zeek DNS JSON | T1071.004 | Validated |
 | [DET-018](detections/splunk/DET-018-beaconing-c2-communication.md) | Beaconing / C2 Communication | Zeek connection/DNS telemetry and cached VirusTotal context | T1071 | Validated / Lab-specific |
+| [DET-019](detections/splunk/DET-019-correlated-suspicious-smb-authentication-activity.md) | Correlated Suspicious SMB Authentication Activity | Suricata EVE + Zeek conn.log | T1021.002 | Validated |
 
 See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 
@@ -253,7 +254,7 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 .
 ├── README.md
 ├── detections/
-│   └── splunk/                  # Catalog, DET-001 through DET-018
+│   └── splunk/                  # Catalog, DET-001 through DET-019
 ├── docs/
 │   ├── cowrie-honeypot-deployment.md
 │   ├── lab-engineering-notes.md
@@ -279,11 +280,11 @@ Internal phishing simulation: [MAIL-SRV01 and GoPhish project](docs/mail-srv01-g
 
 Web application telemetry: [WEB-APP01 deployment and Apache telemetry](docs/web-app01-deployment-and-telemetry.md) · [DET-014 — Cross-Site Scripting (XSS) Attempt](detections/splunk/DET-014-cross-site-scripting-xss-attempt.md) · [DET-016 — Path Traversal / LFI Attempt](detections/splunk/DET-016-path-traversal-lfi-attempt.md)
 
-Network detection and response: [ZEEK01 deployment and telemetry](docs/zeek01-deployment-and-telemetry.md) · [DET-017 — Suspicious DNS Beaconing](detections/splunk/DET-017-suspicious-dns-beaconing.md) · [DET-018 — Beaconing / C2 Communication](detections/splunk/DET-018-beaconing-c2-communication.md)
+Network detection and response: [ZEEK01 deployment and telemetry](docs/zeek01-deployment-and-telemetry.md) · [DET-017 — Suspicious DNS Beaconing](detections/splunk/DET-017-suspicious-dns-beaconing.md) · [DET-018 — Beaconing / C2 Communication](detections/splunk/DET-018-beaconing-c2-communication.md) · [DET-019 — Correlated Suspicious SMB Authentication Activity](detections/splunk/DET-019-correlated-suspicious-smb-authentication-activity.md)
 
 ## Current Status / Known Limitations
 
-- 18 detections are documented—DET-001 through DET-018; none are claimed to be production-ready.
+- 19 detections are documented—DET-001 through DET-019; none are claimed to be production-ready.
 - DET-004 remains Experimental because geo-IP is a weak signal and both validation hits were confirmed as false positives.
 - DET-003 remains a raw search because Windows Event 7045 lacks the required CIM Change field extractions in the current configuration.
 - DET-006 remains a raw search because the CIM `Authentication.src` override is unresolved.
