@@ -20,6 +20,7 @@ The catalog links each detection to its logic, validation evidence, limitations,
 | DET-014 | Cross-Site Scripting (XSS) Attempt | Apache HTTP access logs (`linux_web`, `apache:access`) | T1190 / Scenario-dependent | Validated / Lab-specific | [DET-014](DET-014-cross-site-scripting-xss-attempt.md) |
 | DET-015 | GoPhish Tracked Phishing Link Click | GoPhish application log (`gophish:log`) | T1566.002 / Scenario-dependent | Validated / Lab-specific | [DET-015](DET-015-gophish-tracked-phishing-link-click.md) |
 | DET-016 | Path Traversal / LFI Attempt | Apache HTTP access logs (`linux_web`, `apache:access`) | T1190 / Scenario-dependent | Validated / Lab-specific | [DET-016](DET-016-path-traversal-lfi-attempt.md) |
+| DET-017 | Suspicious DNS Beaconing | Zeek DNS JSON (`zeek:dns:json`) | T1071.004 | Validated | [DET-017](DET-017-suspicious-dns-beaconing.md) |
 | DET-018 | Beaconing / C2 Communication | Zeek `conn`/`dns` JSON and cached VirusTotal context | T1071 | Validated / Lab-specific | [DET-018](DET-018-beaconing-c2-communication.md) |
 
 [Return to the project overview](../../README.md)
