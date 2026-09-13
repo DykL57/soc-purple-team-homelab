@@ -23,5 +23,6 @@ The catalog links each detection to its logic, validation evidence, limitations,
 | DET-017 | Suspicious DNS Beaconing | Zeek DNS JSON (`zeek:dns:json`) | T1071.004 | Validated | [DET-017](DET-017-suspicious-dns-beaconing.md) |
 | DET-018 | Beaconing / C2 Communication | Zeek `conn`/`dns` JSON and cached VirusTotal context | T1071 | Validated / Lab-specific | [DET-018](DET-018-beaconing-c2-communication.md) |
 | DET-019 | Correlated Suspicious SMB Authentication Activity | Suricata EVE + Zeek `conn` JSON | T1021.002 | Validated | [DET-019](DET-019-correlated-suspicious-smb-authentication-activity.md) |
+| DET-020 | Suspicious PowerShell DNS External Connection | Sysmon Event IDs 1/3 + Zeek DNS JSON | T1059.001 / T1071.004 | Validated | [DET-020](DET-020-suspicious-powershell-dns-external-connection.md) |
 
 [Return to the project overview](../../README.md)
