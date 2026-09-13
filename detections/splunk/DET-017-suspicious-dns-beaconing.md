@@ -162,9 +162,21 @@ The domain does not need to be a known IOC. Conversely, periodicity does not mak
 
 ### 1. Production-Window True Positive Validation
 
-The production-window search retained the controlled DNS beacon from KALI-OPS01 to `det017-final-beacon.test` and returned the expected timing statistics.
+The earlier production-window validation detected the controlled DNS beacon from KALI-OPS01 to `det017-beacon.test` in a 15-minute search window. This screenshot predates the later `det017-final-beacon.test` validation and shows the following result:
 
-![DET-017 production-window True Positive validation](../../screenshots/DET-017-02-production-window-validation.png)
+| Field | Visible result |
+|---|---|
+| `id.orig_h` | `10.0.50.60` |
+| `query` | `det017-beacon.test` |
+| `interval_count` | `32` |
+| `regular_intervals` | `29` |
+| `regularity_pct` | `90.6%` |
+| `median_interval` | `15.00` seconds |
+| `avg_interval` | `16.41` seconds |
+| `min_interval` | `13` seconds |
+| `max_interval` | `30` seconds |
+
+![DET-017 earlier production-window validation for det017-beacon.test](../../screenshots/DET-017-02-production-window-validation.png)
 
 ### 2. Negative Validation
 
@@ -193,6 +205,20 @@ The controlled beacon caused the scheduled DET-017 alert to appear in Splunk Tri
 ### 6. False-Positive Discovery
 
 Legitimate periodic DNS activity for `file-srv01.local` satisfied the original timing thresholds with `96.4%` regularity and a 30-second median interval. This observed false positive led to the explicit `.local` and `.arpa` namespace exclusions in the final production search.
+
+The false-positive evidence screenshot shows five overlapping 28-interval windows for this source and query, each with the following statistics:
+
+| Field | Visible result |
+|---|---|
+| `id.orig_h` | `fe80::42d:699f:7719:72ad` |
+| `query` | `file-srv01.local` |
+| `interval_count` | `28` |
+| `regular_intervals` | `27` |
+| `regularity_pct` | `96.4%` |
+| `median_interval` | `30.00` seconds |
+| `avg_interval` | `31.07` seconds |
+| `min_interval` | `29` seconds |
+| `max_interval` | `61` seconds |
 
 ![DET-017 file-srv01.local false-positive discovery](../../screenshots/DET-017-08-false-positive-local-dns.png)
 
