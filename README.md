@@ -31,7 +31,9 @@ The lab is segmented into dedicated infrastructure, endpoint, offensive-security
 - **VMnet7 — 10.0.60.0/24:** Honeypot / Deception
 - **VMnet9 — 10.0.90.0/24:** Isolated Malware Analysis
 
-The environment contains **17 systems**. pfSense segments the routed lab zones, Splunk Enterprise serves as the central SIEM, and the dual-interface ZEEK01 sensor provides passive network monitoring. pfSense's WAN receives a private RFC1918 address from the upstream router, which provides Internet-facing NAT.
+The environment contains **19 systems**: pfSense and 18 hosts/VMs. pfSense segments the routed lab zones, Splunk Enterprise remains the central SIEM, Elastic Security provides an additional endpoint-detection and analysis platform, and the dual-interface ZEEK01 sensor provides passive network monitoring. pfSense's WAN receives a private RFC1918 address from the upstream router, which provides Internet-facing NAT.
+
+> Diagram_10 is preserved as the current visual baseline but predates ELASTIC-SRV01 and WIN-EDR01. The inventory and [ASCII architecture](docs/lab-architecture-ascii.md) below are the authoritative 19-system topology until a separate visual-diagram revision is completed.
 
 > VMnet9 is intentionally isolated with no gateway, no pfSense connectivity, no Internet access, and no Splunk connectivity.
 
@@ -47,13 +49,14 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 - An internal GoPhish simulation integrated with MAIL-SRV01 and validated through GoPhish, Sysmon, pfSense, and Splunk
 - An Apache telemetry pipeline from WEB-APP01 to Splunk Enterprise for controlled web-attack detection engineering
 - A dual-interface Zeek NDR sensor that forwards JSON telemetry from passive VMnet6 observation to Splunk Enterprise through a management-only VMnet3 path
+- An Elastic Security and Elastic Defend endpoint-detection workflow using ELASTIC-SRV01 and the controlled WIN-EDR01 validation endpoint
 - An isolated malware-analysis network with local fake DNS and Internet-service simulation
-- 20 documented Splunk detections—DET-001 through DET-020—with attack or traffic-based validation evidence
+- 21 documented detections—DET-001 through DET-020 in Splunk and DET-021 in Elastic Security—with attack, traffic, or endpoint-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
 
 ## Key Project Highlights
 
-- Documented 20 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, sensitive SMB-share writes, PowerShell download activity, phishing-simulation infrastructure, tracked GoPhish link interaction, XSS-like HTTP requests, path traversal / LFI-like requests, DNS-query periodicity, Zeek-based beaconing analysis, cross-sensor SMB authentication correlation, and PowerShell-to-DNS-to-network correlation.
+- Documented 21 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, sensitive SMB-share writes, PowerShell download activity, phishing-simulation infrastructure, tracked GoPhish link interaction, XSS-like HTTP requests, path traversal / LFI-like requests, DNS-query periodicity, Zeek-based beaconing analysis, cross-sensor SMB authentication correlation, PowerShell-to-DNS-to-network correlation, and Elastic Defend suspicious encoded PowerShell coverage.
 - Identified 759 distinct destination ports touched in one minute during controlled vertical-scan validation.
 - Captured 2,651 failed SMB logons against a local Administrator account and documented the Windows RID 500 lockout limitation.
 - Investigated stale GeoLite2 results, confirmed the observed hits as false positives, and added VirusTotal enrichment to the existing search workflow.
@@ -73,6 +76,8 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 | Splunk Enterprise | Log aggregation, SPL searches, and alerting |
 | Splunk Universal Forwarder + Sysmon | Endpoint telemetry collection |
 | Splunk CIM Add-on | Authentication data-model normalization |
+| Elastic Stack / Elastic Security | Additional endpoint telemetry analysis, investigation, and alerting on ELASTIC-SRV01 |
+| Elastic Agent / Elastic Defend | Process, PowerShell, network, and file telemetry from the controlled WIN-EDR01 endpoint |
 | pfSense CE 2.8.1 | Routing, firewalling, DHCP, and syslog |
 | Suricata | IDS/IPS on pfSense with validated EVE JSON ingestion to Splunk over syslog-ng TCP/5515 |
 | Zeek 8.0.10 LTS / ZeekControl 2.6.0-31 | Passive network monitoring on ZEEK01 with JSON telemetry forwarded to Splunk; partial VMnet6 visibility |
@@ -92,9 +97,9 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 | Network / zone | Subnet / gateway | pfSense connection | Connected systems | Purpose |
 |---|---|---|---|---|
 | VMnet0 | WAN / upstream | pfSense WAN | pfSense | Upstream connectivity |
-| VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01, MAIL-SRV01, ZEEK01 (`ens33`) | Servers, infrastructure, mail, SIEM, and ZEEK01 management |
+| VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01, MAIL-SRV01, ZEEK01 (`ens33`), ELASTIC-SRV01 | Servers, infrastructure, mail, SIEM, Elastic Security, and ZEEK01 management |
 | VMnet4 | `10.0.30.0/24` | pfSense | WIN-CL01, WIN-CL02 | Windows client network |
-| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, C2-SLIVER01, PHISH-GOPHISH; ZEEK01 `ens34` observes passively with no IP | RED_NET, simulation infrastructure, security testing, and partial passive monitoring |
+| VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, WIN-EDR01, C2-SLIVER01, PHISH-GOPHISH; ZEEK01 `ens34` observes passively with no IP | RED_NET, simulation infrastructure, endpoint detection testing, security testing, and partial passive monitoring |
 | VMnet7 | `10.0.60.0/24`; gateway `10.0.60.1` | pfSense DECEPTION | LINUX-HONEYPOT01 | DECEPTION zone for isolated honeypot services |
 | VMnet9 | `10.0.90.0/24`; no gateway | None | SANDBOX01, REMNUX01 | Isolated malware analysis, detonation, and simulated network services |
 
@@ -119,6 +124,8 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 | 15 | MAIL-SRV01 | Ubuntu Server | Postfix SMTP, Dovecot IMAP/IMAPS, Linux-local mailboxes, TLS, Splunk UF | VMnet3 | `10.0.20.0/24` | `10.0.20.30` | Internal mail / telemetry | Active |
 | 16 | PHISH-GOPHISH | Ubuntu Server | GoPhish internal phishing-simulation platform | VMnet6 | `10.0.50.0/24` | `10.0.50.70` | Purple Team simulation infrastructure | Active |
 | 17 | ZEEK01 | Ubuntu 26.04 LTS | Zeek NDR sensor / Splunk Universal Forwarder | VMnet3 (`ens33`), VMnet6 (`ens34`) | Management: `10.0.20.0/24`; passive sensor: VMnet6 | `10.0.20.118` on `ens33`; no IP on `ens34` | Management / partial passive RED_NET visibility | Active |
+| 18 | ELASTIC-SRV01 | Ubuntu Server 26.04 LTS | Elastic Stack / Elastic Security / Fleet Server | VMnet3 | `10.0.20.0/24` | `10.0.20.50` | Endpoint security management / analysis | Active |
+| 19 | WIN-EDR01 | Windows | Windows EDR test endpoint / Elastic Agent / Elastic Defend | VMnet6 | `10.0.50.0/24` | `10.0.50.111` | Controlled endpoint detection validation | Active |
 
 ### Network Segmentation Summary
 
@@ -129,7 +136,8 @@ VMnet3 / 10.0.20.0/24
     ├── DC01
     ├── linux-srv01
     ├── MAIL-SRV01
-    └── ZEEK01 ens33 (management)
+    ├── ZEEK01 ens33 (management)
+    └── ELASTIC-SRV01 (Elastic Security / Fleet Server)
 
 VMnet4 / 10.0.30.0/24
 └── Windows Clients
@@ -144,6 +152,7 @@ VMnet6 / 10.0.50.0/24
     ├── WEB-APP01
     ├── C2-SLIVER01
     ├── PHISH-GOPHISH
+    ├── WIN-EDR01 (Elastic Agent / Elastic Defend)
     └── ZEEK01 ens34 (passive sensor; no IP or gateway)
 
 VMnet7 / 10.0.60.0/24
@@ -213,7 +222,12 @@ SANDBOX01 (`10.0.90.10`) ── fake DNS/network requests ──► REMNUX01 (`1
 REMNUX01 ── dnsmasq / INetSim responses ──► SANDBOX01
 ```
 
-Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise host also acts as the Deployment Server, with DC01 documented as a Deployment Client. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. MAIL-SRV01 forwards Postfix and Dovecot mail telemetry to `index=mail`; the mailboxes are Linux-local and are not represented as Active Directory-integrated. PHISH-GOPHISH forwards GoPhish operational telemetry through Splunk Universal Forwarder to `10.0.20.100:9997`, using `index=gophish` and `sourcetype=gophish:log`. ZEEK01 forwards Zeek JSON telemetry to `index=zeek` over its VMnet3 management interface; its no-IP `ens34` interface observes VMnet6 passively. pfSense forwards firewall, system, and DHCP events for traffic that traverses pfSense. Suricata EVE JSON is read by syslog-ng and sent over TCP/5515 to `index=suricata` with `sourcetype=suricata:eve`; both HTTP telemetry and a controlled IDS signature alert were validated end to end. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. VMnet9 has no Splunk connection; its fake-service traffic remains inside the isolated malware-analysis network. See [Suricata to Splunk Ingestion Validation](docs/suricata-splunk-ingestion-validation.md).
+```text
+WIN-EDR01 (`10.0.50.111`) ── Elastic Agent / Elastic Defend telemetry ──► ELASTIC-SRV01 (`10.0.20.50`)
+                                                                                   └─ Elastic Security / Kibana
+```
+
+Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise host also acts as the Deployment Server, with DC01 documented as a Deployment Client. linux-srv01 provides Syslog and Splunk Universal Forwarder telemetry. MAIL-SRV01 forwards Postfix and Dovecot mail telemetry to `index=mail`; the mailboxes are Linux-local and are not represented as Active Directory-integrated. PHISH-GOPHISH forwards GoPhish operational telemetry through Splunk Universal Forwarder to `10.0.20.100:9997`, using `index=gophish` and `sourcetype=gophish:log`. ZEEK01 forwards Zeek JSON telemetry to `index=zeek` over its VMnet3 management interface; its no-IP `ens34` interface observes VMnet6 passively. pfSense forwards firewall, system, and DHCP events for traffic that traverses pfSense. Suricata EVE JSON is read by syslog-ng and sent over TCP/5515 to `index=suricata` with `sourcetype=suricata:eve`; both HTTP telemetry and a controlled IDS signature alert were validated end to end. Cowrie JSON telemetry is forwarded from LINUX-HONEYPOT01 to Splunk over TCP/9997. Separately, WIN-EDR01 forwards Elastic Agent and Elastic Defend endpoint telemetry to ELASTIC-SRV01 for Elastic Security analysis; no Splunk-to-Elastic integration is claimed. VMnet9 has no Splunk or Elastic connection; its fake-service traffic remains inside the isolated malware-analysis network. See [Suricata to Splunk Ingestion Validation](docs/suricata-splunk-ingestion-validation.md) and [ELASTIC-SRV01 / WIN-EDR01 deployment and telemetry](docs/elastic-srv01-win-edr01-deployment-and-telemetry.md).
 
 ## Detection Engineering
 
@@ -239,8 +253,9 @@ Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise h
 | [DET-018](detections/splunk/DET-018-beaconing-c2-communication.md) | Beaconing / C2 Communication | Zeek connection/DNS telemetry and cached VirusTotal context | T1071 | Validated / Lab-specific |
 | [DET-019](detections/splunk/DET-019-correlated-suspicious-smb-authentication-activity.md) | Correlated Suspicious SMB Authentication Activity | Suricata EVE + Zeek conn.log | T1021.002 | Validated |
 | [DET-020](detections/splunk/DET-020-suspicious-powershell-dns-external-connection.md) | Suspicious PowerShell DNS External Connection | Sysmon Event IDs 1/3 + Zeek DNS | T1059.001 / T1071.004 | Validated |
+| [DET-021](detections/elastic/DET-021-suspicious-encoded-powershell-execution.md) | Suspicious Encoded PowerShell Execution — Elastic Defend | Elastic Endpoint process telemetry | T1059.001 | Validated / Lab-specific |
 
-See the complete [Splunk Detection Catalog](detections/splunk/README.md).
+See the platform-specific [Splunk Detection Catalog](detections/splunk/README.md) and [Elastic Detection Catalog](detections/elastic/README.md).
 
 ## Featured Detection Case Studies
 
@@ -255,9 +270,11 @@ See the complete [Splunk Detection Catalog](detections/splunk/README.md).
 .
 ├── README.md
 ├── detections/
-│   └── splunk/                  # Catalog, DET-001 through DET-020
+│   ├── elastic/                 # Elastic catalog and DET-021
+│   └── splunk/                  # Splunk catalog, DET-001 through DET-020
 ├── docs/
 │   ├── cowrie-honeypot-deployment.md
+│   ├── elastic-srv01-win-edr01-deployment-and-telemetry.md
 │   ├── lab-engineering-notes.md
 │   ├── mail-srv01-gophish-phishing-simulation.md
 │   ├── malware-analysis-sandbox.md
@@ -283,9 +300,11 @@ Web application telemetry: [WEB-APP01 deployment and Apache telemetry](docs/web-
 
 Network detection and response: [ZEEK01 deployment and telemetry](docs/zeek01-deployment-and-telemetry.md) · [DET-017 — Suspicious DNS Beaconing](detections/splunk/DET-017-suspicious-dns-beaconing.md) · [DET-018 — Beaconing / C2 Communication](detections/splunk/DET-018-beaconing-c2-communication.md) · [DET-019 — Correlated Suspicious SMB Authentication Activity](detections/splunk/DET-019-correlated-suspicious-smb-authentication-activity.md) · [DET-020 — Suspicious PowerShell DNS External Connection](detections/splunk/DET-020-suspicious-powershell-dns-external-connection.md)
 
+Elastic endpoint detection: [ELASTIC-SRV01 and WIN-EDR01 deployment and telemetry](docs/elastic-srv01-win-edr01-deployment-and-telemetry.md) · [DET-021 — Suspicious Encoded PowerShell Execution](detections/elastic/DET-021-suspicious-encoded-powershell-execution.md)
+
 ## Current Status / Known Limitations
 
-- 20 detections are documented—DET-001 through DET-020; none are claimed to be production-ready.
+- 21 detections are documented—DET-001 through DET-020 in Splunk and DET-021 in Elastic Security; none are claimed to be production-ready.
 - DET-004 remains Experimental because geo-IP is a weak signal and both validation hits were confirmed as false positives.
 - DET-003 remains a raw search because Windows Event 7045 lacks the required CIM Change field extractions in the current configuration.
 - DET-006 remains a raw search because the CIM `Authentication.src` override is unresolved.
@@ -296,6 +315,8 @@ Network detection and response: [ZEEK01 deployment and telemetry](docs/zeek01-de
 - Suricata EVE JSON ingestion from pfSense through syslog-ng and TCP/5515 to Splunk is active and validated. The controlled SID 2017061 test validated the alert pipeline and did not represent exploitation of a real SolusVM vulnerability.
 - ZEEK01 is operational with `ens33` management on VMnet3 and a no-IP `ens34` passive sensor on VMnet6. It sees outbound RED_NET traffic, but Internet return traffic is not consistently visible; promiscuous mode did not resolve the limitation. DET-018 therefore does not depend on `conn_state`, response bytes, or a complete TCP handshake.
 - Physical Home/IoT devices on `10.100.102.0/24` normally use the upstream Cellcom/Sagemcom router, not pfSense, as their gateway. Complete pfSense, Suricata, or Zeek visibility into their autonomous Internet traffic has not been demonstrated.
+- ELASTIC-SRV01 and WIN-EDR01 provide a validated Elastic Agent / Elastic Defend endpoint-telemetry and Elastic Security alerting workflow. The supplied evidence proves health, visibility, and alert generation, but not prevention or blocking; no Splunk-to-Elastic integration is implemented.
+- Diagram_10 remains the historical 17-system visual baseline and does not yet show ELASTIC-SRV01 or WIN-EDR01. The inventory and ASCII architecture are the authoritative 19-system representation pending a separate visual update.
 - The pfSense WAN uses a private upstream address and a Wi-Fi bridge; the private address is not publicly routable, and the Wi-Fi uplink has shown stability issues.
 
 ## Roadmap
