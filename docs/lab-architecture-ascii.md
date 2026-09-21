@@ -1,6 +1,6 @@
 # Home SOC / Purple Team Lab — ASCII Architecture
 
-This document is a text-only companion to the enterprise architecture diagram. The lab contains exactly 17 systems: pfSense and 16 hosts/VMs.
+This document is the authoritative text topology while Diagram_10 remains a historical visual baseline. The lab contains exactly 19 systems: pfSense and 18 hosts/VMs.
 
 ```text
                               [ Internet ]
@@ -23,6 +23,7 @@ This document is a text-only companion to the enterprise architecture diagram. T
              |                          Red Team / Targets / Simulation
              |                          |-- KALI-OPS01       10.0.50.60
              |                          |-- WIN-REDTEAM01    10.0.50.50
+             |                          |-- WIN-EDR01        10.0.50.111
              |                          |-- FILE-SRV01       10.0.50.105
              |                          |-- WEB-APP01        10.0.50.102
              |                          |-- C2-SLIVER01      10.0.50.61
@@ -34,6 +35,7 @@ This document is a text-only companion to the enterprise architecture diagram. T
              |    |-- linux-srv01         10.0.20.41
              |    |-- MAIL-SRV01          10.0.20.30
              |    |-- Splunk Enterprise   10.0.20.100  (Rocky Linux 64-bit)
+             |    |-- ELASTIC-SRV01        10.0.20.50   (Elastic Security / Fleet)
              |    `-- ZEEK01              10.0.20.118  (Management)
              |         |-- ens33 -> VMnet3 -> 10.0.20.118 Management
              |         `-- ens34 -> VMnet6 -> Passive Sensor / No IP
@@ -73,5 +75,16 @@ Cowrie -----------+
 ```
 
 ZEEK01 is one dual-interface system. Its `ens33` interface provides management connectivity on VMnet3 at `10.0.20.118`; its `ens34` interface passively monitors VMnet6 and has no IP address. Splunk Enterprise and Rocky Linux 64-bit are likewise one system.
+
+## Elastic endpoint telemetry flow
+
+```text
+WIN-EDR01 (`10.0.50.111`, VMnet6)
+    └─ Elastic Agent / Elastic Defend telemetry
+           └─► ELASTIC-SRV01 (`10.0.20.50`, VMnet3)
+                    └─ Elastic Security / Kibana
+```
+
+Elastic Security is an additional detection and analysis platform. It does not replace Splunk Enterprise, and no integration between Splunk and Elastic is represented.
 
 VMnet9 is intentionally separate from the routed architecture and has no connection to pfSense, Splunk Enterprise, the Internet, or any routed VMnet.

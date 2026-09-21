@@ -2,6 +2,8 @@
 
 The catalog links each detection to its logic, validation evidence, limitations, and analyst guidance. Statuses describe the evidence in this lab, not production deployment readiness.
 
+DET-021 is implemented with Elastic Security / Elastic Defend and is listed in the separate [Elastic Detection Catalog](../elastic/README.md), not as a Splunk-native detection.
+
 | ID | Detection | Data Source | MITRE ATT&CK | Status | Documentation |
 |---|---|---|---|---|---|
 | DET-001 | Brute-force authentication | Windows Security 4625 / CIM Authentication | T1110 | Validated | [DET-001](DET-001-brute-force-authentication.md) |
