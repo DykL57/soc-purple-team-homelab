@@ -51,12 +51,12 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 - A dual-interface Zeek NDR sensor that forwards JSON telemetry from passive VMnet6 observation to Splunk Enterprise through a management-only VMnet3 path
 - An Elastic Security and Elastic Defend endpoint-detection workflow using ELASTIC-SRV01 and the controlled WIN-EDR01 validation endpoint
 - An isolated malware-analysis network with local fake DNS and Internet-service simulation
-- 21 documented detections—DET-001 through DET-020 in Splunk and DET-021 in Elastic Security—with attack, traffic, or endpoint-based validation evidence
+- 22 documented detections—DET-001 through DET-020 and DET-022 in Splunk, plus DET-021 in Elastic Security—with attack, traffic, or endpoint-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
 
 ## Key Project Highlights
 
-- Documented 21 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, sensitive SMB-share writes, PowerShell download activity, phishing-simulation infrastructure, tracked GoPhish link interaction, XSS-like HTTP requests, path traversal / LFI-like requests, DNS-query periodicity, Zeek-based beaconing analysis, cross-sensor SMB authentication correlation, PowerShell-to-DNS-to-network correlation, and Elastic Defend suspicious encoded PowerShell coverage.
+- Documented 22 detections spanning authentication, lateral movement, reconnaissance, network activity, PowerShell execution, user discovery, command-and-control communication, sensitive SMB-share writes, PowerShell download activity, phishing-simulation infrastructure, tracked GoPhish link interaction, XSS-like HTTP requests, path traversal / LFI-like requests, DNS-query periodicity, Zeek-based beaconing analysis, cross-sensor correlation, behavioral Active Directory reconnaissance, and Elastic Defend suspicious encoded PowerShell coverage.
 - Identified 759 distinct destination ports touched in one minute during controlled vertical-scan validation.
 - Captured 2,651 failed SMB logons against a local Administrator account and documented the Windows RID 500 lockout limitation.
 - Investigated stale GeoLite2 results, confirmed the observed hits as false positives, and added VirusTotal enrichment to the existing search workflow.
@@ -254,6 +254,7 @@ Windows telemetry is stored in dedicated Splunk indexes. The Splunk Enterprise h
 | [DET-019](detections/splunk/DET-019-correlated-suspicious-smb-authentication-activity.md) | Correlated Suspicious SMB Authentication Activity | Suricata EVE + Zeek conn.log | T1021.002 | Validated |
 | [DET-020](detections/splunk/DET-020-suspicious-powershell-dns-external-connection.md) | Suspicious PowerShell DNS External Connection | Sysmon Event IDs 1/3 + Zeek DNS | T1059.001 / T1071.004 | Validated |
 | [DET-021](detections/elastic/DET-021-suspicious-encoded-powershell-execution.md) | Suspicious Encoded PowerShell Execution — Elastic Defend | Elastic Endpoint process telemetry | T1059.001 | Validated / Lab-specific |
+| [DET-022](detections/splunk/DET-022-behavioral-active-directory-reconnaissance.md) | Behavioral Active Directory Reconnaissance | Sysmon Event ID 3 + Zeek connection JSON + DC01 Event 5145 | T1087.002 / T1069.002 | Validated |
 
 See the platform-specific [Splunk Detection Catalog](detections/splunk/README.md) and [Elastic Detection Catalog](detections/elastic/README.md).
 
@@ -271,7 +272,7 @@ See the platform-specific [Splunk Detection Catalog](detections/splunk/README.md
 ├── README.md
 ├── detections/
 │   ├── elastic/                 # Elastic catalog and DET-021
-│   └── splunk/                  # Splunk catalog, DET-001 through DET-020
+│   └── splunk/                  # Splunk catalog, DET-001 through DET-020 and DET-022
 ├── docs/
 │   ├── cowrie-honeypot-deployment.md
 │   ├── elastic-srv01-win-edr01-deployment-and-telemetry.md
@@ -300,11 +301,13 @@ Web application telemetry: [WEB-APP01 deployment and Apache telemetry](docs/web-
 
 Network detection and response: [ZEEK01 deployment and telemetry](docs/zeek01-deployment-and-telemetry.md) · [DET-017 — Suspicious DNS Beaconing](detections/splunk/DET-017-suspicious-dns-beaconing.md) · [DET-018 — Beaconing / C2 Communication](detections/splunk/DET-018-beaconing-c2-communication.md) · [DET-019 — Correlated Suspicious SMB Authentication Activity](detections/splunk/DET-019-correlated-suspicious-smb-authentication-activity.md) · [DET-020 — Suspicious PowerShell DNS External Connection](detections/splunk/DET-020-suspicious-powershell-dns-external-connection.md)
 
+Active Directory detection: [DET-022 — Behavioral Active Directory Reconnaissance](detections/splunk/DET-022-behavioral-active-directory-reconnaissance.md)
+
 Elastic endpoint detection: [ELASTIC-SRV01 and WIN-EDR01 deployment and telemetry](docs/elastic-srv01-win-edr01-deployment-and-telemetry.md) · [DET-021 — Suspicious Encoded PowerShell Execution](detections/elastic/DET-021-suspicious-encoded-powershell-execution.md)
 
 ## Current Status / Known Limitations
 
-- 21 detections are documented—DET-001 through DET-020 in Splunk and DET-021 in Elastic Security; none are claimed to be production-ready.
+- 22 detections are documented—DET-001 through DET-020 and DET-022 in Splunk, plus DET-021 in Elastic Security; none are claimed to be production-ready.
 - DET-004 remains Experimental because geo-IP is a weak signal and both validation hits were confirmed as false positives.
 - DET-003 remains a raw search because Windows Event 7045 lacks the required CIM Change field extractions in the current configuration.
 - DET-006 remains a raw search because the CIM `Authentication.src` override is unresolved.
