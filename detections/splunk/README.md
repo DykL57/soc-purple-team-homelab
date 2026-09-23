@@ -26,5 +26,6 @@ DET-021 is implemented with Elastic Security / Elastic Defend and is listed in t
 | DET-018 | Beaconing / C2 Communication | Zeek `conn`/`dns` JSON and cached VirusTotal context | T1071 | Validated / Lab-specific | [DET-018](DET-018-beaconing-c2-communication.md) |
 | DET-019 | Correlated Suspicious SMB Authentication Activity | Suricata EVE + Zeek `conn` JSON | T1021.002 | Validated | [DET-019](DET-019-correlated-suspicious-smb-authentication-activity.md) |
 | DET-020 | Suspicious PowerShell DNS External Connection | Sysmon Event IDs 1/3 + Zeek DNS JSON | T1059.001 / T1071.004 | Validated | [DET-020](DET-020-suspicious-powershell-dns-external-connection.md) |
+| DET-022 | Behavioral Active Directory Reconnaissance | Sysmon Event ID 3 + Zeek connection JSON + DC01 Event 5145 | T1087.002 / T1069.002 | Validated | [DET-022](DET-022-behavioral-active-directory-reconnaissance.md) |
 
 [Return to the project overview](../../README.md)
