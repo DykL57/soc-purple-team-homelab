@@ -279,6 +279,7 @@ Historical screenshots remain unmodified and may display the original lab/test u
 | [Windows 4625 field validation](../../screenshots/DET-011-02-windows-4625-field-validation.png) | Confirms authentication-failure fields available during troubleshooting. |
 | [Object-access audit-policy review](../../screenshots/DET-011-05-file-srv01-object-access-audit-policy.png) | Records the audit-policy state used to generate file-share telemetry. |
 | [Blocked FILE-SRV01-to-DC01 DNS traffic](../../screenshots/DET-011-06-pfsense-file-srv01-to-dc01-dns-block.png) | Shows the initial segmentation issue affecting domain operations. |
+| [Blocked FILE-SRV01-to-DC01 DNS and Kerberos traffic](../../screenshots/DET-011-07-pfsense-file-srv01-dc01-blocked-ad-ports.png) | Aggregates blocked FILE-SRV01-to-DC01 DNS and Kerberos traffic during domain-authentication troubleshooting. |
 | [AD core-port alias](../../screenshots/DET-011-08-pfsense-ad-dc-core-ports-alias.png) | Documents the restricted port alias created during remediation. |
 | [DC DNS and Kerberos connectivity](../../screenshots/DET-011-11-file-srv01-dc-dns-kerberos-connectivity.png) | Validates core domain-service reachability from FILE-SRV01. |
 | [WIN-CL01 DNS and Kerberos validation](../../screenshots/DET-011-13-win-cl01-dns-kerberos-connectivity-validation.png) | Preserves client-side domain connectivity evidence. |
