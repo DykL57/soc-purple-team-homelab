@@ -191,7 +191,7 @@ Potential matches can include:
 - Legitimate testing or applications that accept HTML-like input can match.
 - Search-time detection depends on the `web_lab` extraction and the availability of the required fields.
 - T1190 is a scenario-dependent mapping; WEB-APP01 is not claimed to be Internet-facing.
-- Suricata alert ingestion into Splunk remains pending and is not part of this validation.
+- Suricata alert ingestion into Splunk is now validated separately and is not part of this DET-014 validation.
 
 ## Security / Safety Note
 
