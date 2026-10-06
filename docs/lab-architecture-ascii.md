@@ -1,6 +1,6 @@
 # Home SOC / Purple Team Lab — ASCII Architecture
 
-This document is the authoritative text topology while Diagram_10 remains a historical visual baseline. The lab contains exactly 19 systems: pfSense and 18 hosts/VMs.
+This document is the text-based companion to the current Diagram_11 architecture. The lab contains exactly 23 active systems: pfSense and 22 hosts/VMs. Planned systems are listed separately and are not included in that count.
 
 ```text
                               [ Internet ]
@@ -35,7 +35,11 @@ This document is the authoritative text topology while Diagram_10 remains a hist
              |    |-- linux-srv01         10.0.20.41
              |    |-- MAIL-SRV01          10.0.20.30
              |    |-- Splunk Enterprise   10.0.20.100  (Rocky Linux 64-bit)
-             |    |-- ELASTIC-SRV01        10.0.20.50   (Elastic Security / Fleet)
+             |    |-- ELASTIC-SRV01       10.0.20.50   (Elastic Security / Fleet)
+             |    |-- GREENBONE01         10.0.20.120  (Greenbone / OpenVAS)
+             |    |-- ZABBIX01            10.0.20.121  (Infrastructure monitoring)
+             |    |-- VELOCIRAPTOR01      10.0.20.122  (DFIR / endpoint investigation)
+             |    |-- MISP01              10.0.20.123  (Threat intelligence / IOC management)
              |    `-- ZEEK01              10.0.20.118  (Management)
              |         |-- ens33 -> VMnet3 -> 10.0.20.118 Management
              |         `-- ens34 -> VMnet6 -> Passive Sensor / No IP
@@ -88,3 +92,16 @@ WIN-EDR01 (`10.0.50.111`, VMnet6)
 Elastic Security is an additional detection and analysis platform. It does not replace Splunk Enterprise, and no integration between Splunk and Elastic is represented.
 
 VMnet9 is intentionally separate from the routed architecture and has no connection to pfSense, Splunk Enterprise, the Internet, or any routed VMnet.
+
+## Planned platform
+
+```text
+THEHIVE-CORTEX01  (PLANNED — not included in the 23 active systems)
+    OS: Ubuntu Server
+    Network: VMnet3 / 10.0.20.0/24
+    IP: TBD
+    Intended role: TheHive incident response / case management
+                   Cortex analysis / enrichment
+```
+
+No deployment, operational status, integration, or validation is claimed for THEHIVE-CORTEX01.
