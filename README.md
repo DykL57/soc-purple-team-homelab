@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository documents a segmented, enterprise-style home lab used to practice SOC operations, adversary simulation, SIEM engineering, and detection validation. It demonstrates how Windows and network telemetry is collected in Splunk Enterprise, turned into defensible detections, tested in a controlled environment, and investigated with known limitations preserved.
+This repository documents a segmented, enterprise-style home lab used to practice SOC operations, adversary simulation, SIEM engineering, detection validation, vulnerability management, infrastructure monitoring, DFIR, endpoint investigation, and threat-intelligence management. It demonstrates how telemetry and security platforms are deployed and evaluated in a controlled environment, with verified capabilities and known limitations preserved.
 
 > Core SIEM platform: **Splunk Enterprise**. Suricata is deployed on pfSense, and its EVE JSON ingestion path to Splunk is active and validated.
 
@@ -21,7 +21,9 @@ This repository documents a segmented, enterprise-style home lab used to practic
 
 The lab is segmented into dedicated infrastructure, endpoint, offensive-security, deception, phishing-simulation, and isolated malware-analysis networks.
 
-![Home SOC Purple Team Lab Architecture](screenshots/Network-Architecture-Diagram_10-dark.png)
+![Home SOC Purple Team Lab Architecture](screenshots/Network-Architecture-Diagram_11-dark.png)
+
+Alternative light presentation: [Network-Architecture-Diagram_11.png](screenshots/Network-Architecture-Diagram_11.png).
 
 ### Architecture at a Glance
 
@@ -31,9 +33,9 @@ The lab is segmented into dedicated infrastructure, endpoint, offensive-security
 - **VMnet7 — 10.0.60.0/24:** Honeypot / Deception
 - **VMnet9 — 10.0.90.0/24:** Isolated Malware Analysis
 
-The environment contains **19 systems**: pfSense and 18 hosts/VMs. pfSense segments the routed lab zones, Splunk Enterprise remains the central SIEM, Elastic Security provides an additional endpoint-detection and analysis platform, and the dual-interface ZEEK01 sensor provides passive network monitoring. pfSense's WAN receives a private RFC1918 address from the upstream router, which provides Internet-facing NAT.
+The environment contains **23 active systems**: pfSense and 22 hosts/VMs. pfSense segments the routed lab zones; Splunk Enterprise remains the central SIEM; Elastic Security provides an additional endpoint-detection and analysis platform; ZEEK01 provides partial passive network monitoring; and Greenbone/OpenVAS, Zabbix, Velociraptor, and MISP extend the lab into vulnerability management, infrastructure monitoring, DFIR, and threat-intelligence management. pfSense's WAN receives a private RFC1918 address from the upstream router, which provides Internet-facing NAT.
 
-> Diagram_10 is preserved as the current visual baseline but predates ELASTIC-SRV01 and WIN-EDR01. The inventory and [ASCII architecture](docs/lab-architecture-ascii.md) below are the authoritative 19-system topology until a separate visual-diagram revision is completed.
+> Diagram_11 is the current 23-system architecture. Diagram_10 and earlier diagrams remain preserved as historical snapshots.
 
 > VMnet9 is intentionally isolated with no gateway, no pfSense connectivity, no Internet access, and no Splunk connectivity.
 
@@ -50,6 +52,7 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 - An Apache telemetry pipeline from WEB-APP01 to Splunk Enterprise for controlled web-attack detection engineering
 - A dual-interface Zeek NDR sensor that forwards JSON telemetry from passive VMnet6 observation to Splunk Enterprise through a management-only VMnet3 path
 - An Elastic Security and Elastic Defend endpoint-detection workflow using ELASTIC-SRV01 and the controlled WIN-EDR01 validation endpoint
+- Active Greenbone/OpenVAS vulnerability-management, Zabbix infrastructure-monitoring, Velociraptor DFIR, and MISP threat-intelligence platforms on the infrastructure network
 - An isolated malware-analysis network with local fake DNS and Internet-service simulation
 - 22 documented detections—DET-001 through DET-020 and DET-022 in Splunk, plus DET-021 in Elastic Security—with attack, traffic, or endpoint-based validation evidence
 - CIM-based `tstats` searches for authentication use cases and documented raw-search fallbacks where field mappings are incomplete
@@ -64,6 +67,7 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 - Built an internal Postfix/Dovecot mail workflow and safe GoPhish campaign, then correlated the recipient's Microsoft Edge connection across Sysmon Event ID 3 and pfSense using the complete network tuple and time proximity.
 - Deployed ZEEK01 with separate management and passive-sensor interfaces, validated Zeek JSON ingestion and custom Notice telemetry, and built DET-018 around timing regularity, DNS context, and cached VirusTotal enrichment.
 - Validated the Suricata EVE JSON pipeline from pfSense through syslog-ng over TCP/5515 to Splunk, including field extraction, a controlled HTTP marker, and a controlled SID 2017061 alert test.
+- Expanded the active lab from 19 to 23 systems with dedicated vulnerability-management, infrastructure-monitoring, DFIR/endpoint-investigation, and threat-intelligence capabilities while keeping unverified integrations explicitly out of scope.
 - Identified a Sysmon `NetworkConnect` include-rule visibility gap and a pfSense prefix-dependent parsing failure, corrected both, and repeated the activity to validate final telemetry rather than treating missing events as missing activity.
 - Preserved root-cause findings for CIM mapping, Windows log placement, DHCP configuration, timestamps, and WAN stability in [Lab Engineering Notes](docs/lab-engineering-notes.md).
 
@@ -81,6 +85,10 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 | pfSense CE 2.8.1 | Routing, firewalling, DHCP, and syslog |
 | Suricata | IDS/IPS on pfSense with validated EVE JSON ingestion to Splunk over syslog-ng TCP/5515 |
 | Zeek 8.0.10 LTS / ZeekControl 2.6.0-31 | Passive network monitoring on ZEEK01 with JSON telemetry forwarded to Splunk; partial VMnet6 visibility |
+| Greenbone / OpenVAS | Vulnerability scanning and vulnerability-management capability on GREENBONE01; scan targets, credentials, schedules, and integrations are not yet documented |
+| Zabbix | Infrastructure, host, service, and availability monitoring on ZABBIX01; agent coverage and integrations are not yet documented |
+| Velociraptor | DFIR, endpoint visibility, threat hunting, and artifact collection on VELOCIRAPTOR01; client coverage and integrations are not yet documented |
+| MISP | Threat-intelligence, IOC-management, and sharing capability on MISP01; feeds, automation, and integrations are not yet documented |
 | Postfix | Internal SMTP transport, queueing, and local message delivery on MAIL-SRV01 |
 | Dovecot | IMAP/IMAPS access to Linux-local lab mailboxes |
 | Thunderbird | Mail client used by the controlled recipient on WIN-CL01 |
@@ -97,7 +105,7 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 | Network / zone | Subnet / gateway | pfSense connection | Connected systems | Purpose |
 |---|---|---|---|---|
 | VMnet0 | WAN / upstream | pfSense WAN | pfSense | Upstream connectivity |
-| VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01, MAIL-SRV01, ZEEK01 (`ens33`), ELASTIC-SRV01 | Servers, infrastructure, mail, SIEM, Elastic Security, and ZEEK01 management |
+| VMnet3 | `10.0.20.0/24` | pfSense | Rocky Linux 64-bit (Splunk), linux-srv01, DC01, MAIL-SRV01, ZEEK01 (`ens33`), ELASTIC-SRV01, GREENBONE01, ZABBIX01, VELOCIRAPTOR01, MISP01 | Servers, infrastructure, mail, SIEM, endpoint security, vulnerability management, monitoring, DFIR, threat intelligence, and ZEEK01 management |
 | VMnet4 | `10.0.30.0/24` | pfSense | WIN-CL01, WIN-CL02 | Windows client network |
 | VMnet6 | `10.0.50.0/24`; gateway `10.0.50.1` | pfSense OPT2 | KALI-OPS01, WEB-APP01, FILE-SRV01, WIN-REDTEAM01, WIN-EDR01, C2-SLIVER01, PHISH-GOPHISH; ZEEK01 `ens34` observes passively with no IP | RED_NET, simulation infrastructure, endpoint detection testing, security testing, and partial passive monitoring |
 | VMnet7 | `10.0.60.0/24`; gateway `10.0.60.1` | pfSense DECEPTION | LINUX-HONEYPOT01 | DECEPTION zone for isolated honeypot services |
@@ -126,6 +134,12 @@ For a text-based and version-control-friendly representation, see [`docs/lab-arc
 | 17 | ZEEK01 | Ubuntu 26.04 LTS | Zeek NDR sensor / Splunk Universal Forwarder | VMnet3 (`ens33`), VMnet6 (`ens34`) | Management: `10.0.20.0/24`; passive sensor: VMnet6 | `10.0.20.118` on `ens33`; no IP on `ens34` | Management / partial passive RED_NET visibility | Active |
 | 18 | ELASTIC-SRV01 | Ubuntu Server 26.04 LTS | Elastic Stack / Elastic Security / Fleet Server | VMnet3 | `10.0.20.0/24` | `10.0.20.50` | Endpoint security management / analysis | Active |
 | 19 | WIN-EDR01 | Windows | Windows EDR test endpoint / Elastic Agent / Elastic Defend | VMnet6 | `10.0.50.0/24` | `10.0.50.111` | Controlled endpoint detection validation | Active |
+| 20 | GREENBONE01 | Ubuntu Server | Greenbone / OpenVAS vulnerability scanner and vulnerability management | VMnet3 | `10.0.20.0/24` | `10.0.20.120` | Vulnerability management / security assessment | Active |
+| 21 | ZABBIX01 | Ubuntu Server | Zabbix Server / infrastructure, host, service, and availability monitoring | VMnet3 | `10.0.20.0/24` | `10.0.20.121` | Infrastructure monitoring / lab health | Active |
+| 22 | VELOCIRAPTOR01 | Ubuntu Server | Velociraptor Server / DFIR / endpoint visibility / threat hunting / artifact collection | VMnet3 | `10.0.20.0/24` | `10.0.20.122` | DFIR / threat hunting / endpoint investigation | Active |
+| 23 | MISP01 | Ubuntu Server | MISP threat-intelligence platform / IOC management / sharing | VMnet3 | `10.0.20.0/24` | `10.0.20.123` | Threat intelligence / IOC management | Active |
+
+Planned (not included in the 23-system active count): **THEHIVE-CORTEX01**, an Ubuntu Server system proposed for VMnet3 with an IP address still to be determined. Its intended role is TheHive incident-response/case management with Cortex analysis and enrichment; no deployment, integration, or operational status is claimed.
 
 ### Network Segmentation Summary
 
@@ -137,7 +151,11 @@ VMnet3 / 10.0.20.0/24
     ├── linux-srv01
     ├── MAIL-SRV01
     ├── ZEEK01 ens33 (management)
-    └── ELASTIC-SRV01 (Elastic Security / Fleet Server)
+    ├── ELASTIC-SRV01 (Elastic Security / Fleet Server)
+    ├── GREENBONE01 (Greenbone / OpenVAS)
+    ├── ZABBIX01 (infrastructure monitoring)
+    ├── VELOCIRAPTOR01 (DFIR / endpoint investigation)
+    └── MISP01 (threat intelligence / IOC management)
 
 VMnet4 / 10.0.30.0/24
 └── Windows Clients
@@ -279,8 +297,12 @@ See the platform-specific [Splunk Detection Catalog](detections/splunk/README.md
 │   ├── lab-engineering-notes.md
 │   ├── mail-srv01-gophish-phishing-simulation.md
 │   ├── malware-analysis-sandbox.md
+│   ├── misp-deployment-and-threat-intelligence.md
 │   ├── phish-gophish-deployment-and-telemetry.md
+│   ├── vulnerability-management-deployment.md
+│   ├── velociraptor-deployment-and-client-coverage.md
 │   ├── zeek01-deployment-and-telemetry.md
+│   ├── zabbix-deployment-and-agent-coverage.md
 │   ├── sliver-c2-deployment.md
 │   ├── splunk_index_precedence_EN.md
 │   ├── troubleshooting-cowrie-splunk-ingestion.md
@@ -305,6 +327,8 @@ Active Directory detection: [DET-022 — Behavioral Active Directory Reconnaissa
 
 Elastic endpoint detection: [ELASTIC-SRV01 and WIN-EDR01 deployment and telemetry](docs/elastic-srv01-win-edr01-deployment-and-telemetry.md) · [DET-021 — Suspicious Encoded PowerShell Execution](detections/elastic/DET-021-suspicious-encoded-powershell-execution.md)
 
+Security platform deployments: [Greenbone/OpenVAS vulnerability management](docs/vulnerability-management-deployment.md) · [Zabbix infrastructure monitoring](docs/zabbix-deployment-and-agent-coverage.md) · [Velociraptor DFIR and client coverage](docs/velociraptor-deployment-and-client-coverage.md) · [MISP threat intelligence](docs/misp-deployment-and-threat-intelligence.md)
+
 ## Current Status / Known Limitations
 
 - 22 detections are documented—DET-001 through DET-020 and DET-022 in Splunk, plus DET-021 in Elastic Security; none are claimed to be production-ready.
@@ -319,7 +343,9 @@ Elastic endpoint detection: [ELASTIC-SRV01 and WIN-EDR01 deployment and telemetr
 - ZEEK01 is operational with `ens33` management on VMnet3 and a no-IP `ens34` passive sensor on VMnet6. It sees outbound RED_NET traffic, but Internet return traffic is not consistently visible; promiscuous mode did not resolve the limitation. DET-018 therefore does not depend on `conn_state`, response bytes, or a complete TCP handshake.
 - Physical Home/IoT devices on `10.100.102.0/24` normally use the upstream Cellcom/Sagemcom router, not pfSense, as their gateway. Complete pfSense, Suricata, or Zeek visibility into their autonomous Internet traffic has not been demonstrated.
 - ELASTIC-SRV01 and WIN-EDR01 provide a validated Elastic Agent / Elastic Defend endpoint-telemetry and Elastic Security alerting workflow. The supplied evidence proves health, visibility, and alert generation, but not prevention or blocking; no Splunk-to-Elastic integration is implemented.
-- Diagram_10 remains the historical 17-system visual baseline and does not yet show ELASTIC-SRV01 or WIN-EDR01. The inventory and ASCII architecture are the authoritative 19-system representation pending a separate visual update.
+- Diagram_11 and the ASCII architecture document the current 23 active systems. Diagram_10 and earlier diagrams are historical snapshots.
+- GREENBONE01, ZABBIX01, VELOCIRAPTOR01, and MISP01 are active. Product versions, authenticated scan configuration, Zabbix agent coverage, Velociraptor client coverage, MISP feeds, automation, and cross-platform integrations are not yet documented or claimed.
+- THEHIVE-CORTEX01 remains planned only, with no assigned IP address and no claimed deployment, validation, or integration.
 - The pfSense WAN uses a private upstream address and a Wi-Fi bridge; the private address is not publicly routable, and the Wi-Fi uplink has shown stability issues.
 
 ## Roadmap
@@ -333,6 +359,8 @@ Elastic endpoint detection: [ELASTIC-SRV01 and WIN-EDR01 deployment and telemetr
 - [ ] Improve ZEEK01 VMnet6 visibility using a validated mirroring/TAP design
 - [ ] Expand detections into persistence, command-and-control, and exfiltration scenarios
 - [ ] Add malware-analysis tooling and evaluate a controlled evidence-export or Splunk-integration workflow without routing VMnet9
+- [ ] Deploy and validate THEHIVE-CORTEX01 for incident-response case management and Cortex analysis/enrichment; assign an IP and document integrations only after verification
+- [ ] Document verified Greenbone scan coverage, Zabbix agent/service coverage, Velociraptor client coverage, and MISP feed/integration configuration
 
 ## About / Contact
 
