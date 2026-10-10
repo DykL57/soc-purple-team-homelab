@@ -21,9 +21,9 @@ This repository documents a segmented, enterprise-style home lab used to practic
 
 The lab is segmented into dedicated infrastructure, endpoint, offensive-security, deception, phishing-simulation, and isolated malware-analysis networks.
 
-![Home SOC Purple Team Lab Architecture](screenshots/Network-Architecture-Diagram_11-dark.png)
+![Home SOC Purple Team Lab Architecture](screenshots/Network-Architecture-Diagram_12-dark.png)
 
-Alternative light presentation: [Network-Architecture-Diagram_11.png](screenshots/Network-Architecture-Diagram_11.png).
+Alternative light presentation: [Network-Architecture-Diagram_12.png](screenshots/Network-Architecture-Diagram_12.png).
 
 ### Architecture at a Glance
 
@@ -35,7 +35,7 @@ Alternative light presentation: [Network-Architecture-Diagram_11.png](screenshot
 
 The environment contains **25 active systems**: pfSense and 24 hosts/VMs. pfSense segments the routed lab zones; Splunk Enterprise remains the central SIEM; Elastic Security provides an additional endpoint-detection and analysis platform; ZEEK01 provides partial passive network monitoring; and Greenbone/OpenVAS, Zabbix, Velociraptor, MISP, TheHive, and Cortex extend the lab into vulnerability management, infrastructure monitoring, DFIR, threat intelligence, incident-response case management, and security analysis/enrichment. pfSense's WAN receives a private RFC1918 address from the upstream router, which provides Internet-facing NAT.
 
-> Diagram_11 is the latest graphical snapshot and represents the earlier 23-system state. The [ASCII architecture](docs/lab-architecture-ascii.md) and inventory below are authoritative for the current 25-system architecture until a new graphical revision is created. Diagram_10 and earlier diagrams remain preserved as historical snapshots.
+> Diagram_12 is the current graphical architecture for the 25 active systems. Diagram_11 is preserved as the historical 23-system snapshot, and Diagram_10 and earlier diagrams remain preserved as earlier historical versions. The [ASCII architecture](docs/lab-architecture-ascii.md) provides the corresponding text reference.
 
 > VMnet9 is intentionally isolated with no gateway, no pfSense connectivity, no Internet access, and no Splunk connectivity.
 
@@ -351,7 +351,7 @@ Security platform deployments: [Greenbone/OpenVAS vulnerability management](docs
 - ZEEK01 is operational with `ens33` management on VMnet3 and a no-IP `ens34` passive sensor on VMnet6. It sees outbound RED_NET traffic, but Internet return traffic is not consistently visible; promiscuous mode did not resolve the limitation. DET-018 therefore does not depend on `conn_state`, response bytes, or a complete TCP handshake.
 - Physical Home/IoT devices on `10.100.102.0/24` normally use the upstream Cellcom/Sagemcom router, not pfSense, as their gateway. Complete pfSense, Suricata, or Zeek visibility into their autonomous Internet traffic has not been demonstrated.
 - ELASTIC-SRV01 and WIN-EDR01 provide a validated Elastic Agent / Elastic Defend endpoint-telemetry and Elastic Security alerting workflow. The supplied evidence proves health, visibility, and alert generation, but not prevention or blocking; no Splunk-to-Elastic integration is implemented.
-- The inventory and ASCII architecture document the current 25 active systems. Diagram_11 is the latest graphical snapshot but remains an intentionally preserved 23-system historical view until a separate diagram update.
+- The inventory, ASCII architecture, and Diagram_12 document the current 25 active systems. Diagram_11 remains preserved as the historical 23-system snapshot.
 - GREENBONE01, ZABBIX01, VELOCIRAPTOR01, and MISP01 are active. Product versions, authenticated scan configuration, Zabbix agent coverage, Velociraptor client coverage, MISP feeds, automation, and cross-platform integrations are not yet documented or claimed.
 - THEHIVE01 and CORTEX01 are separate active VMnet3 systems. TheHive, Cassandra, Elasticsearch, both web interfaces, Cortex analyzer-catalog access, `TestAnalyzer_1_0`, and the high-level TheHive-to-Cortex relationship have been validated. No additional analyzers, responders, automation, or integrations are claimed.
 - The pfSense WAN uses a private upstream address and a Wi-Fi bridge; the private address is not publicly routable, and the Wi-Fi uplink has shown stability issues.
