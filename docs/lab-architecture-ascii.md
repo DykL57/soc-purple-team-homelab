@@ -1,6 +1,6 @@
 # Home SOC / Purple Team Lab — ASCII Architecture
 
-This document is the text-based companion to the current Diagram_11 architecture. The lab contains exactly 23 active systems: pfSense and 22 hosts/VMs. Planned systems are listed separately and are not included in that count.
+This document is the authoritative current text topology. The lab contains exactly 25 active systems: pfSense and 24 hosts/VMs. Diagram_11 remains an earlier 23-system graphical snapshot until a separate visual update is completed.
 
 ```text
                               [ Internet ]
@@ -40,6 +40,8 @@ This document is the text-based companion to the current Diagram_11 architecture
              |    |-- ZABBIX01            10.0.20.121  (Infrastructure monitoring)
              |    |-- VELOCIRAPTOR01      10.0.20.122  (DFIR / endpoint investigation)
              |    |-- MISP01              10.0.20.123  (Threat intelligence / IOC management)
+             |    |-- THEHIVE01           10.0.20.124  (Incident response / case management)
+             |    |-- CORTEX01            10.0.20.125  (Analysis / enrichment)
              |    `-- ZEEK01              10.0.20.118  (Management)
              |         |-- ens33 -> VMnet3 -> 10.0.20.118 Management
              |         `-- ens34 -> VMnet6 -> Passive Sensor / No IP
@@ -93,15 +95,12 @@ Elastic Security is an additional detection and analysis platform. It does not r
 
 VMnet9 is intentionally separate from the routed architecture and has no connection to pfSense, Splunk Enterprise, the Internet, or any routed VMnet.
 
-## Planned platform
+## TheHive and Cortex relationship
 
 ```text
-THEHIVE-CORTEX01  (PLANNED — not included in the 23 active systems)
-    OS: Ubuntu Server
-    Network: VMnet3 / 10.0.20.0/24
-    IP: TBD
-    Intended role: TheHive incident response / case management
-                   Cortex analysis / enrichment
+THEHIVE01 (`10.0.20.124`, VMnet3)
+    └─ validated integration ─► CORTEX01 (`10.0.20.125`, VMnet3)
+                                  └─ `TestAnalyzer_1_0` execution: Success
 ```
 
-No deployment, operational status, integration, or validation is claimed for THEHIVE-CORTEX01.
+THEHIVE01 and CORTEX01 are separate active systems. This relationship records the validated high-level integration and successful test-analyzer execution only; it does not imply that every analyzer, responder, automation, or external integration is configured.
