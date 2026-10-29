@@ -8,6 +8,11 @@ This repository documents a segmented, enterprise-style home lab used to practic
 
 > **Public sanitization:** This repository represents an isolated cybersecurity home lab. Documented IP addresses are private lab addressing unless explicitly stated otherwise, and all identities are lab/test accounts. Screenshots and evidence are reviewed before publication; credentials, secrets, public endpoints, and sensitive operational information are intentionally excluded.
 
+## 🤖 New: AI-Assisted SOC Triage
+
+I connected local and cloud LLMs to this lab's Splunk through the Splunk MCP Server and had them investigate a real brute-force alert, scored against my own manual investigation.
+→ **[ai-soc-triage-lab](https://github.com/DykL57/ai-soc-triage-lab)**: five evals, a least-privilege AI identity, and what the AI got right and wrong.
+
 ## Quick Navigation
 
 - [Architecture](#architecture)
