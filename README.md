@@ -11,6 +11,7 @@ This repository documents a segmented, enterprise-style home lab used to practic
 ## 🤖 New: AI-Assisted SOC Triage
 
 I connected local and cloud LLMs to this lab's Splunk through the Splunk MCP Server and had them investigate a real brute-force alert, scored against my own manual investigation.
+
 → **[ai-soc-triage-lab](https://github.com/DykL57/ai-soc-triage-lab)**: five evals, a least-privilege AI identity, and what the AI got right and wrong.
 
 ## Quick Navigation
@@ -21,6 +22,7 @@ I connected local and cloud LLMs to this lab's Splunk through the Splunk MCP Ser
 - [Featured Detection Case Studies](#featured-detection-case-studies)
 - [Current Status / Known Limitations](#current-status--known-limitations)
 - [Roadmap](#roadmap)
+- [AI-Assisted SOC Triage ↗](https://github.com/DykL57/ai-soc-triage-lab)
 
 ## Architecture
 
